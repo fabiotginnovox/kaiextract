@@ -1,0 +1,40 @@
+Agência/Cód. Beneficiário CNPJ/CPF - Pagador Data Emissão
+Número Documento Vencimento
+3211/11950-2 02819556000130 21/05/2026 9907637002 19/06/2026
+Beneficiário CNPJ/CPF - Beneficiário Valor
+SECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES 24.566.663/0001-36
+21 4,00
+Av. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP : 51110-160
+Apto :
+Pagador EDF. AVIS LIBERTA MENSAL ASSOC. JAN/26 A MAI/26 TX/24 -2/3
+Valor a pagar : R$214,00
+Código Descrição Complemento Documento Valor
+MENSAL JAN/26 A MAI/26 E TAXA/2024 214,00
+Instruções de Cobrança
+MENSAL JAN/26 A MAI/26 E TAXA/202 214,00 + JUROS AO DIA R$0, 07
+(0,0333%)
+ACORDO - MENSAL ASSOC. JAN/26 A MAI /ZG E TAXA ASSIST ZOGA PARC.OZ/OZ
+APOS VENCIMENTO MULTA DE R$4,Z8 (Z%)
+RECIBO DO PAGADOR Nosso Nº: 109/00IZZSZ-Z-S Formulário Eletrônico
+CARSOFT
+Banco Itau S.A. 34191.09008 00000.000000 00000.000000 0 00000000021400
+Autenticação Mecânica
+Conterir os digitos verificadores que estão abaixo anivorme con os digitos a seguir Z-L-0-L
+Banco Itau S.A. 341-7 Vencimento
+Local do Pagamento Até o vencimento, preferencialmente no Itaú. Após o vencimento, somente no Itaú.
+Beneficiário SECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES CNPJ: 24.566.663/0001-36 Agência/Código Beneficiário
+Av. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP: 51110-160 Nosso Numero
+Data Documento Número do Documento Espécie do Documento Aceite Data do Processamento
+21/05/2026 9907637002 DM N 21/05/2026 109/0012252-2-5
+Uso do banco Carteira Espécie moeda Quantidade Valor Valor Documento
+109 R$ 214,00
+Instruções de responsabilidade do beneficiário Qualquer dúvida sobre este boleto, contate o beneficiário.
+MENSAL JAN/26 A MAI/26 E TAXA/2024 214,00 (-) Descontos/Ajustamentos
+ACORDO - MENSAL ASSOC. JAN/26 A MAI/26 E TAXA ASSIST 2024 PARC. 02/02 (+) Outras Deduções
+APOS VENCIMENTO MULTA DE R$ 4,28 (2%) (+) Moras/Multas
++ JUROS AO DIA R$ 0,07 (0,0333%) (+) Outros Acréscimos
+SECOVI-PE (81) 2122-7600 secovi@secovi-pe.com.br (=) Valor Cobrado
+Pagador 00226 EDF. AVIS LIBERTA
+R DOM SEBASTIAO LEME, 211
+GRACAS - RECIFE - PE CEP: 52011-120 CNPJ/CPF: 02.819.556/0001-30
+Sacador/Avalista Código de Baixa

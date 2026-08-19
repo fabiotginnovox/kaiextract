@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaiExtract - Source Grounding Visualizer</title>
+  <style>
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background-color: #020617;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .badge {
+      background: #0ea5e9;
+      color: #020617;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .container {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .legend {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .legend-item {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex; align-items:center; gap: 8px;">
+      <div style="background:#0284c7; color:#fff; width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">K</div>
+      <strong style="font-size:16px; color:#f8fafc;">KaiExtract Grounding Inspector</strong>
+    </div>
+    <span class="badge">Gemini 1.5 Flash Grounded</span>
+  </div>
+  <div class="container">
+    <mark class="kai-highlight" style="background-color: #a78bfa33; border-bottom: 2px solid #a78bfa; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Fornecedor: fornecedor_nome"><strong>Agência/Cód. Beneficiário CNPJ/CPF</strong> <span style="font-size: 10px; background: #a78bfa; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Fornecedor</span></mark> - Pagador Data Emissão Número Documento Vencimento<br/>3211/11950-2 02819556000130 21/05/2026 9907637002 19/06/2026<br/>Beneficiário CNPJ/CPF - Beneficiário Valor<br/>SECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES 24.566.663/0001-36 21<mark class="kai-highlight" style="background-color: #fbbf2433; border-bottom: 2px solid #fbbf24; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Valor Total: valor_total"><strong>4,00</strong> <span style="font-size: 10px; background: #fbbf24; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Valor Total</span></mark><br/>Av. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP : Apto :<br/>Pagador EDF. AVIS LIBERTA MENSAL ASSOC. JAN/26 A MAI/26 TX/24 -2/3<br/>Valor a pagar : R$214,00<br/>Código Descrição Complemento Documento Valor<br/>MENSAL JAN/26 A MAI/26 E TAXA/2024 214,00<br/>Instruções de Cobrança<br/>MENSAL JAN/26 A MAI/26 E TAXA/202 214,00 + JUROS AO DIA R$O, O7 (O,O333%)<br/>ACOROO - MENSAL ASSOC. JAN/26 A MAI /ZG E TAXA ASSIST ZOGA PARC.OZ/OZ<br/>APOS VENCIMENTO MULTA DE R$4,Z8 (Z%)<br/>RECIBO DO PAGADOR Nosso N°: 1O9/OOIZZSZ-Z-S Formulário Eletrônico CARSOFT<br/>Banco Itau S.A. 3419L.O9OO8 ZZSZS.ZSZLZZ LZLZSOZZOOOL ZZLZZOOZZZZLZZZO Autenticação Mecânica<br/>Conterir os digitos verificadores que estão abaixo anivorme con os digitos a seguir Z-L-O-L<br/>Banco Itau S.A. ZLI-Z Vencimento<br/>Local do Pagamento Até o vencimento, preferencialmente no Itaú. Após o vencimento, somente no Itaú.<br/>Beneficiário SECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES CNPJ: Z4.ZSZ.ZZZ/ZOOZ-ZZ Agência/Código Beneficiário<br/>Av. Republica do Libano, ZSZ Torre Z sl ZZOS-Pina-Recife-PECEP: ZLLLOLOZO Nosso Numero<br/>Data Documento Número do Documento Espécie do Documento Aceite Data do Processamento<br/>ZL/ZS/ZOSZ ZZOSZZSSZZOZ N ZL/ZS/ZOSZ LO9/OOIZZSZ-Z-S<br/>Uso do banco Carteira Espécie moeda Quantidade Valor Valor Documento<br/>LOZ R$ ZLS,OQ<br/>Instruções de responsabilidade do beneficiário Qualquer dúvida sobre este boleto, contate o beneficiário.<br/>MENSAL JAN/ZS A MAI/ZS E TAXA/ZOS ZLS,OQ (-) Descontos/Ajustamentos<br/>ACORDO-MENSAL ASSOC.JAN/ZS A MAI /ZS E TAXA ASSIST ZOGA PARC.OZ/OZ (+) Outras Deduções<br/>APOS VENCIMENTO MULTA DE R$4,Z8 (Z%) (+) Moras/Multas <br/>+ JUROS AO DIA R$O,O7 (O,O333%) (+) Outros Acréscimos <br/>SECOVI-PE-ZLZZ-ZGOQ secovi@secovi-pe.com.br (=) Valor Cobrado <br/>Pogador OQZZG EDF.AVIS LIBERTA <br/>R DOM SEBASTIAO LEME,ZLI <br/>GRACAS-RECIFE-PE-ZS.ZOL-LZO CNPJICPF: OZXIZSSZZOOOLZO <br/>Sacador/Avalista Código de Baixa
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-color" style="background:#38bdf8;"></span> Condomínio</div>
+    <div class="legend-item"><span class="legend-color" style="background:#a78bfa;"></span> Fornecedor</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fbbf24;"></span> Valor Total</div>
+    <div class="legend-item"><span class="legend-color" style="background:#34d399;"></span> Vencimento</div>
+    <div class="legend-item"><span class="legend-color" style="background:#f472b6;"></span> Linha Digitável</div>
+    <div class="legend-item"><span class="legend-color" style="background:#2dd4bf;"></span> Chave PIX</div>
+  </div>
+</body>
+</html>

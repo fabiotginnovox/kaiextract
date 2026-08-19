@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background-color: #2E2621;
+  color: #999592;
+  font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Brand Card & Structure */
+.kai-card {
+  background-color: #2E2621;
+  border: 1px solid #453A31;
+}
+
+.kai-card-interactive {
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.kai-card-interactive:hover {
+  border-color: #58493D;
+}
+
+/* Primary Brand Button */
+.kai-btn-primary {
+  background-color: #D5A474;
+  color: #2D251B;
+  font-weight: 600;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.kai-btn-primary:hover {
+  opacity: 0.92;
+}
+
+.kai-btn-primary:active {
+  transform: scale(0.99);
+}
+
+/* Custom Editorial Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #2E2621;
+}
+::-webkit-scrollbar-thumb {
+  background: #453A31;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #58493D;
+}
+
+/* Two-color headline signature helper */
+.kai-two-tone {
+  color: #FFFEFD;
+}
+.kai-two-tone span {
+  color: #999592;
+}
+
+/* Source Grounding Visual Highlights & Smooth Focus Glow */
+.kai-html-renderer mark {
+  position: relative;
+  display: inline-block;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.kai-html-renderer mark:hover {
+  filter: brightness(1.25);
+}
+
+.kai-html-renderer mark.active-scroll {
+  outline: 2px solid #D5A474 !important;
+  outline-offset: 3px;
+  box-shadow: 0 0 16px rgba(213, 164, 116, 0.6), 0 0 30px rgba(213, 164, 116, 0.25) !important;
+  animation: kaiGlowPulse 1.6s ease-in-out infinite alternate !important;
+  z-index: 20;
+}
+
+@keyframes kaiGlowPulse {
+  0% {
+    box-shadow: 0 0 8px rgba(213, 164, 116, 0.4);
+    outline-color: rgba(213, 164, 116, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 24px rgba(213, 164, 116, 0.95);
+    outline-color: #F8D3AC;
+  }
+}
+
+.blink-dot {
+  display: none;
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 9px;
+  height: 9px;
+  background-color: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #10B981;
+  z-index: 30;
+}
+
+.blink-dot.active {
+  display: block !important;
+  animation: kaiBlinkDot 0.9s infinite alternate;
+}
+
+@keyframes kaiBlinkDot {
+  0% { opacity: 0.5; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.4); }
+}
+

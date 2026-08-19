@@ -1,0 +1,8 @@
+COMPANHIA PAULISTA DE FORÇA E LUZ - CPFL
+CNPJ: 02.838.720/0001-28
+Unidade Consumidora: CONDOMINIO EDIFICIO BELLA VISTA - CNPJ: 12.345.678/0001-90
+Referência: 09/2026 | Emissão: 01/10/2026 | Vencimento: 15/10/2026
+Valor do Fornecimento: R$ 1.450,80
+Desconto Pontualidade: R$ 0,00 | Acréscimos: R$ 0,00
+Total a Pagar: R$ 1.450,80
+Linha Digitável: 83660000001-4 45080048100-3 15102026123-0 00012345678-9

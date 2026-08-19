@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KaiExtract - Source Grounding Visualizer</title>
+  <style>
+    body {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      background-color: #020617;
+      color: #e2e8f0;
+      margin: 0;
+      padding: 24px;
+      line-height: 1.6;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 16px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #1e293b;
+    }
+    .badge {
+      background: #0ea5e9;
+      color: #020617;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .container {
+      background-color: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.5);
+      font-size: 13px;
+      overflow-x: auto;
+    }
+    .legend {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .legend-item {
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="display:flex; align-items:center; gap: 8px;">
+      <div style="background:#0284c7; color:#fff; width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px;">K</div>
+      <strong style="font-size:16px; color:#f8fafc;">KaiExtract Grounding Inspector</strong>
+    </div>
+    <span class="badge">Gemini 1.5 Flash Grounded</span>
+  </div>
+  <div class="container">
+    <mark class="kai-highlight" style="background-color: #a78bfa33; border-bottom: 2px solid #a78bfa; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Fornecedor: fornecedor_nome"><strong>ENEL DISTRIBUIÇÃO S.P.</strong> <span style="font-size: 10px; background: #a78bfa; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Fornecedor</span></mark> - CNPJ: 61.695.227/0001-93<br/><mark class="kai-highlight" style="background-color: #38bdf833; border-bottom: 2px solid #38bdf8; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Condomínio: condominio_nome"><strong>CONDOMINIO RESIDENCIAL SOLARIS</strong> <span style="font-size: 10px; background: #38bdf8; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Condomínio</span></mark> - CNPJ: 98.765.432/0001-11<br/>Total a Pagar: R$ <mark class="kai-highlight" style="background-color: #fbbf2433; border-bottom: 2px solid #fbbf24; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Valor Total: valor_total"><strong>3.420,80</strong> <span style="font-size: 10px; background: #fbbf24; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Valor Total</span></mark><br/>Vencimento: <mark class="kai-highlight" style="background-color: #f472b633; border-bottom: 2px solid #f472b6; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Vencimento: data_vencimento"><strong>15/09/2026</strong> <span style="font-size: 10px; background: #f472b6; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Vencimento</span></mark><br/>Linha Digitável: <mark class="kai-highlight" style="background-color: #34d39933; border-bottom: 2px solid #34d399; color: #f8fafc; padding: 2px 4px; border-radius: 4px;" title="Linha Digitável: linha_digitavel"><strong>83610000034-2 20800048100-8 26091512345-6 00000000000-0</strong> <span style="font-size: 10px; background: #34d399; color: #020617; padding: 1px 4px; border-radius: 3px; font-weight: bold; margin-left: 2px;">Linha Digitável</span></mark>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="legend-color" style="background:#38bdf8;"></span> Condomínio</div>
+    <div class="legend-item"><span class="legend-color" style="background:#a78bfa;"></span> Fornecedor</div>
+    <div class="legend-item"><span class="legend-color" style="background:#fbbf24;"></span> Valor Total</div>
+    <div class="legend-item"><span class="legend-color" style="background:#34d399;"></span> Vencimento</div>
+    <div class="legend-item"><span class="legend-color" style="background:#f472b6;"></span> Linha Digitável</div>
+    <div class="legend-item"><span class="legend-color" style="background:#2dd4bf;"></span> Chave PIX</div>
+  </div>
+</body>
+</html>

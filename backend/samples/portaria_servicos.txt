@@ -1,0 +1,10 @@
+GUARDIAN SEGURANÇA PATRIMONIAL E SERVIÇOS LTDA
+CNPJ: 18.999.888/0001-33
+Fatura Mensal de Serviços Especializados de Portaria e Vigilância 24h
+Tomador: CONDOMINIO RESIDENCIAL GRAN TERRACO - CNPJ: 45.666.777/0001-88
+Emissão: 28/09/2026 | Vencimento: 05/10/2026
+Valor dos Serviços: R$ 8.500,00
+Desconto por Adiantamento: R$ 0,00 | Encargos: R$ 0,00
+Total a Pagar: R$ 8.500,00
+Linha Digitável: 23793.38128 60012.345678 90001.234567 1 98760000850000
+Chave PIX: financeiro@guardianseguranca.com.br
