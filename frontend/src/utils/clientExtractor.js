@@ -203,43 +203,44 @@ export function extractDocumentClientSide(text, userHint = null) {
     }
 
     // Dynamic Universal Semantic Listener for ANY requested field or document passage
-    const cleanPrompt = h.replace(/^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar)\s+(?:o|a|os|as|um|uma)?\s*/i, '').replace(/[\.\?!:]+$/, '').trim();
+    const cleanPrompt = h.replace(/^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar|procure|procurar)\s+(?:o|a|os|as|um|uma)?\s*/i, '').replace(/[\.\?!:]+$/, '').trim();
     const cleanPromptLower = cleanPrompt.toLowerCase();
 
     if (cleanPromptLower.length >= 3) {
-      const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
-      let matchedInLine = false;
-
-      for (const line of lines) {
-        const lineLower = line.toLowerCase();
-        if (lineLower.includes(cleanPromptLower)) {
-          matchedInLine = true;
-          if (line.includes(':') || line.includes(' - ')) {
-            const sep = line.includes(':') ? ':' : ' - ';
-            const colonIdx = line.indexOf(sep);
-            const k = line.substring(0, colonIdx).trim();
-            let v = line.substring(colonIdx + sep.length).trim();
-            // Remove parenthetical notes if present (e.g. QSOQQ ZSI ZZ SQ ou QQ (Ligação gratuita...))
-            const parenIdx = v.indexOf('(');
-            const cleanVal = (parenIdx !== -1 ? v.substring(0, parenIdx) : v).trim();
-            
-            const safeKey = k.toLowerCase().replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
-            doc[safeKey] = cleanVal || v;
-            if (/telefone|contato|fone|ouvidoria|gratuita/i.test(safeKey)) {
-              doc.fornecedor_contato = cleanVal || v;
-            }
-          } else {
-            const safeKey = cleanPromptLower.replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
-            doc[safeKey] = line;
-          }
+      function makeFlexPattern(phrase) {
+        let pat = '';
+        for (let i = 0; i < phrase.length; i++) {
+          const ch = phrase[i];
+          if (/[aáàãâ]/i.test(ch)) pat += '[aáàãâAÁÀÃÂ]';
+          else if (/[eéê]/i.test(ch)) pat += '[eéêEÉÊ]';
+          else if (/[ií]/i.test(ch)) pat += '[iíIÍ]';
+          else if (/[oóõô0]/i.test(ch)) pat += '[oóõôOÓÕÔ0oOD]';
+          else if (/[uú]/i.test(ch)) pat += '[uúUÚ]';
+          else if (/[cç]/i.test(ch)) pat += '[cçCÇ]';
+          else if (/\s/.test(ch)) pat += '\\s+';
+          else if (/[0-9a-zA-Z]/.test(ch)) pat += ch;
+          else pat += '\\' + ch;
         }
+        return pat;
       }
 
-      if (!matchedInLine) {
-        const matchPos = t.toLowerCase().indexOf(cleanPromptLower);
-        if (matchPos !== -1) {
-          const safeKey = cleanPromptLower.replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
-          doc[safeKey] = t.substring(matchPos, matchPos + cleanPrompt.length);
+      const patStr = makeFlexPattern(cleanPrompt);
+      const valRegex = new RegExp(patStr + '[:\\s\\-]+([^\\n\\r\\(\\[\\{]{2,60})', 'i');
+      const valMatch = t.match(valRegex);
+
+      if (valMatch) {
+        const valExtracted = valMatch[1].trim();
+        const safeKey = cleanPromptLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
+        doc[safeKey] = valExtracted;
+        if (/telefone|contato|fone|ouvidoria|gratuita/i.test(safeKey)) {
+          doc.fornecedor_contato = valExtracted;
+        }
+      } else {
+        const exactRegex = new RegExp(patStr, 'i');
+        const exactMatch = t.match(exactRegex);
+        if (exactMatch) {
+          const safeKey = cleanPromptLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
+          doc[safeKey] = exactMatch[0].trim();
         }
       }
     }

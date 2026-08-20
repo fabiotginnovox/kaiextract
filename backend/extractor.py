@@ -420,40 +420,59 @@ class KaiExtractorCore:
         # Dynamic Universal Semantic Listener: If user_hint requests ANY field or passage in the document
         if user_hint:
             h_raw = user_hint.strip()
-            # Clean verbs and particles
-            clean_p = re.sub(r"^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar)\s+(?:o|a|os|as|um|uma)?\s*", "", h_raw, flags=re.IGNORECASE).strip().rstrip(".!?:")
+            # Clean command verbs and particles
+            clean_p = re.sub(
+                r"^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar|procure|procurar)\s+(?:o|a|os|as|um|uma)?\s*",
+                "",
+                h_raw,
+                flags=re.IGNORECASE
+            ).strip().rstrip(".!?:")
+
+            clean_p = re.sub(r"\s*(?:por\s+favor|por\s+gentileza|no\s+documento|na\s+fatura|no\s+texto)\s*$", "", clean_p, flags=re.IGNORECASE).strip()
             clean_p_lower = clean_p.lower()
 
             if len(clean_p_lower) >= 3:
-                matched_line = False
-                for line in lines:
-                    line_clean = line.strip()
-                    line_lower = line_clean.lower()
-                    if clean_p_lower in line_lower:
-                        matched_line = True
-                        if ":" in line_clean or " - " in line_clean:
-                            sep = ":" if ":" in line_clean else " - "
-                            parts = line_clean.split(sep, 1)
-                            k, v = parts[0].strip(), parts[1].strip()
-                            # Clean parenthetical notes if present (e.g. QSOQQ ZSI... (Ligação gratuita...))
-                            v_clean = re.split(r"[\(\[\{]", v)[0].strip() if "(" in v else v
-                            k_norm = unicodedata.normalize('NFKD', k).encode('ASCII', 'ignore').decode('utf-8')
-                            safe_key = re.sub(r"[^\w]+", "_", k_norm.lower()).strip("_")
-                            extracted[safe_key] = v_clean or v
-                            if any(w in safe_key for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
-                                extracted["fornecedor_contato"] = v_clean or v
+                # Build accent-flexible regex
+                def _make_flex_pattern(phrase: str) -> str:
+                    parts = []
+                    for ch in phrase:
+                        if ch in "aAáÁàÀãÃâÂ":
+                            parts.append(r"[aáàãâAÁÀÃÂ]")
+                        elif ch in "eEéÉêÊ":
+                            parts.append(r"[eéêEÉÊ]")
+                        elif ch in "iIíÍ":
+                            parts.append(r"[iíIÍ]")
+                        elif ch in "oOóÓõÕôÔ0":
+                            parts.append(r"[oóõôOÓÕÔ0oOD]")
+                        elif ch in "uUúÚ":
+                            parts.append(r"[uúUÚ]")
+                        elif ch in "cCçÇ":
+                            parts.append(r"[cçCÇ]")
+                        elif ch == " ":
+                            parts.append(r"\s+")
                         else:
-                            clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
-                            safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
-                            extracted[safe_key] = line_clean
+                            parts.append(re.escape(ch))
+                    return "".join(parts)
 
-                if not matched_line:
-                    # Search substring in full text
-                    idx = text.lower().find(clean_p_lower)
-                    if idx != -1:
+                pat_str = _make_flex_pattern(clean_p)
+                
+                # Check for value following label: e.g. "TELEFONE LIGAÇÃO GRATUITA: QSOQQ ZSI ZZ SQ ou QQ"
+                val_m = re.search(pat_str + r"[:\s\-]+([^\n\r\(\[\{]{2,60})", text, re.IGNORECASE)
+                if val_m:
+                    val_extracted = val_m.group(1).strip()
+                    clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
+                    safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
+                    extracted[safe_key] = val_extracted
+                    if any(w in safe_key for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
+                        extracted["fornecedor_contato"] = val_extracted
+                else:
+                    # Check if clean_p itself is present in text
+                    exact_m = re.search(pat_str, text, re.IGNORECASE)
+                    if exact_m:
+                        matched_str = exact_m.group(0).strip()
                         clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
                         safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
-                        extracted[safe_key] = text[idx:idx + len(clean_p)]
+                        extracted[safe_key] = matched_str
 
         # Chave PIX
         pix_m = re.search(r"(?:PIX|PIX Copia e Cola|Chave PIX)[:\s]*([0-9a-zA-Z\.\-@\+\$\#]{10,200})", text, re.IGNORECASE)
