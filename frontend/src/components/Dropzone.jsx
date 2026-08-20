@@ -29,21 +29,8 @@ export default function Dropzone({ onProcessText, onProcessFile, samples = [] })
   };
 
   return (
-    <div className="flex flex-col items-center justify-center max-w-4xl mx-auto w-full my-auto py-6">
+    <div className="flex flex-col items-center justify-center max-w-4xl mx-auto w-full my-auto py-4">
       
-      {/* Hero Title with Brand Two-Tone Signature */}
-      <div className="text-center mb-8">
-        <div className="font-mono text-[11px] uppercase tracking-widest text-[#BCB4AD] mb-3">
-          Extração Automatizada com Source Grounding
-        </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-[#FFFEFD] tracking-normal font-normal mb-3">
-          Arraste a fatura ou boleto <span className="text-[#999592]">para auditar e extrair.</span>
-        </h1>
-        <p className="text-[#999592] text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-          Sem formulários manuais ou digitação propensa a erros. Identificação de condomínio, fornecedor, valores e linha digitável em segundos.
-        </p>
-      </div>
-
       {/* Main Upload Box */}
       {!isTextMode ? (
         <div
@@ -73,7 +60,7 @@ export default function Dropzone({ onProcessText, onProcessFile, samples = [] })
               Solte seu arquivo <span className="font-mono text-sm uppercase px-2 py-0.5 border border-[#453A31] rounded text-[#BCB4AD]">.TXT</span> aqui
             </h3>
             <p className="text-[#97918D] text-xs sm:text-sm max-w-md mb-6">
-              Contas de concessionárias (CPFL, Sabesp), contratos (Schindler, Portaria) ou guias de tributos (DARF).
+              Contas de concessionárias (CPFL, Sabesp), contratos (Manutenção elevador, Portaria) ou guias de tributos (DARF).
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3">
@@ -157,7 +144,7 @@ export default function Dropzone({ onProcessText, onProcessFile, samples = [] })
                     {sample.category}
                   </span>
                   <p className="font-serif text-sm font-normal text-[#FFFEFD] group-hover:text-[#D5A474] transition-colors line-clamp-1">
-                    {sample.title}
+                    {sample.title?.replace(/Schindler/i, 'Manutenção')}
                   </p>
                 </div>
                 <span className="text-[11px] text-[#97918D] mt-3 flex items-center gap-1 group-hover:text-[#FFFEFD]">

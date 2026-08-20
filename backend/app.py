@@ -66,6 +66,8 @@ def get_samples():
                     content = f.read()
                 
                 title = filename.replace(".txt", "").replace("_", " ").title()
+                if "schindler" in filename:
+                    title = "Manutenção Elevadores"
                 if "cpfl" in filename or "sabesp" in filename:
                     category = "Consumo"
                 elif "schindler" in filename or "portaria" in filename:

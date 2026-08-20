@@ -21,16 +21,9 @@ export default function Navbar({
         <img 
           src={logoSvg} 
           alt="KaiExtract" 
-          className="h-8 w-auto object-contain"
+          className="h-8 w-auto object-contain cursor-pointer"
+          onClick={onReset}
         />
-        <div className="hidden sm:block border-l border-[#453A31] pl-3.5">
-          <span className="font-mono text-[10px] tracking-widest uppercase text-[#BCB4AD] block">
-            Multi-ERP Financial Grounding
-          </span>
-          <span className="text-[11px] text-[#97918D]">
-            Interoperabilidade Condominial
-          </span>
-        </div>
       </div>
 
       {/* Interactive Stepper / Workflow Pipeline */}

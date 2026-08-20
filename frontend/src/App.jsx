@@ -70,7 +70,7 @@ export default function App() {
         },
         {
           id: "schindler_elevadores.txt",
-          title: "Schindler Elevadores",
+          title: "Manutenção Elevadores",
           category: "Contratos",
           content: "ELEVADORES ATLAS SCHINDLER S.A.\nCNPJ: 61.065.259/0001-10\nSacado / Condomínio: Condomínio Solaris Premium - CNPJ: 33.444.555/0001-22\nData de Vencimento: 10/11/2026\nValor Líquido a Pagar: R$ 890,00\nLinha Digitável: 34191.79001 01043.510047 91020.150008 4 98150000089000\nPIX Copia e Cola: 00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-426614174000"
         }
@@ -387,8 +387,8 @@ export default function App() {
       />
 
       {/* Footer Minimalista */}
-      <footer className="border-t border-kai-border py-3 px-8 text-center text-[11px] text-kai-support">
-        KaiExtract Platform • Interoperabilidade Multi-ERP (SuperLógica, CondominIA) • SELECT Edition
+      <footer className="border-t border-[#453A31] py-3 px-8 text-center text-[11px] text-[#97918D] font-mono">
+        KaiExtract Platform • @Innovox - 2026
       </footer>
 
     </div>
