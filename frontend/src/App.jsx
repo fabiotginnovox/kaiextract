@@ -302,6 +302,52 @@ export default function App() {
     setFocusedField(field);
   };
 
+  const handleDeleteField = (field) => {
+    if (!field) return;
+
+    const aliases = {
+      fornecedor_endereco: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
+      endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
+      condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
+      endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
+      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      fornecedor_cnpj: ['fornecedor_cnpj', 'cnpj_fornecedor'],
+      condominio_cnpj: ['condominio_cnpj', 'cnpj_condominio']
+    };
+
+    const keysToRemove = new Set(aliases[field] || [field]);
+
+    setCurrentDoc(prev => {
+      const updatedDados = { ...prev.dadosExtraidos };
+      keysToRemove.forEach(k => {
+        if (k in updatedDados) {
+          updatedDados[k] = '';
+        }
+      });
+
+      const updatedSpans = (prev.groundingSpans || []).filter(s => 
+        !keysToRemove.has(s.field) && 
+        !keysToRemove.has((s.field || '').replace('grounding-', '')) &&
+        !keysToRemove.has((s.label || '').toLowerCase().replace(/[\s_-]+/g, '_'))
+      );
+      const updatedHtml = buildGroundingHtml(prev.rawText, updatedSpans);
+
+      return {
+        ...prev,
+        dadosExtraidos: updatedDados,
+        groundingSpans: updatedSpans,
+        htmlContent: updatedHtml
+      };
+    });
+
+    setEditedFields(prev => {
+      const copy = { ...prev };
+      keysToRemove.forEach(k => delete copy[k]);
+      return copy;
+    });
+  };
+
   const handleSync = async () => {
     try {
       const res = await fetch('/api/export', {
@@ -434,6 +480,7 @@ export default function App() {
                 isReExtracting={isReExtracting}
                 editedFields={editedFields}
                 focusedField={focusedField}
+                onDeleteField={handleDeleteField}
               />
             </div>
 

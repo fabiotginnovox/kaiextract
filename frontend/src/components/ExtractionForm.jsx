@@ -18,7 +18,9 @@ import {
   RefreshCw,
   X,
   MessageSquare,
-  Loader2
+  Loader2,
+  AlertTriangle,
+  Trash2
 } from 'lucide-react';
 
 const CATEGORIAS_PADRAO = [
@@ -207,12 +209,28 @@ function MarkedField({
 }) {
   const [isFocused, setIsFocused] = useState(false);
   const [hasLocalEdit, setHasLocalEdit] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const inputRef = useRef(null);
+  const confirmRef = useRef(null);
   const colorContext = React.useContext(GroundingColorContext);
   const spanColorMap = colorContext?.spanColorMap || (colorContext?.color ? {} : colorContext) || {};
   const editedFields = colorContext?.editedFields || {};
 
   const edited = isEdited || hasLocalEdit || Boolean(fieldName && editedFields[fieldName]);
+
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (confirmRef.current && !confirmRef.current.contains(e.target)) {
+        setShowDeleteConfirm(false);
+      }
+    };
+    if (showDeleteConfirm) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [showDeleteConfirm]);
 
   // Date formatting for Brazilian standard DD/MM/YYYY
   const displayValue = useMemo(() => {
@@ -274,7 +292,7 @@ function MarkedField({
       id={fieldName ? `form-field-${fieldName}` : undefined}
       data-field={fieldName}
       data-label={label}
-      className={`flex flex-col transition-all rounded-lg ${className}`} 
+      className={`flex flex-col transition-all rounded-lg relative ${className}`} 
       onClick={handleClick}
     >
       {label && (
@@ -294,7 +312,7 @@ function MarkedField({
       )}
 
       <div
-        className={`w-full bg-[#2E2621] border rounded-lg p-1.5 transition-all min-h-[38px] flex items-center cursor-text ${
+        className={`w-full bg-[#2E2621] border rounded-lg p-1.5 transition-all min-h-[38px] flex items-center justify-between gap-1.5 cursor-text relative ${
           edited
             ? 'border-[#FF0000]/60 ring-1 ring-[#FF0000]/20'
             : isFocused
@@ -302,23 +320,45 @@ function MarkedField({
               : 'border-[#453A31] hover:border-[#58493D]'
         }`}
       >
-        {isMarked ? (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              inputRef.current?.focus();
-              if (onFocusField && fieldName) onFocusField(fieldName);
-            }}
-            className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-mono font-medium transition-all ${
-              fullWidthPill ? 'w-full' : 'max-w-full'
-            }`}
-            style={{
-              backgroundColor: activeConfig.bg,
-              borderColor: `${activeConfig.color}66`,
-              borderBottom: `2.5px solid ${activeConfig.color}`,
-              boxShadow: `0 2px 8px ${activeConfig.glow}`,
-            }}
-          >
+        <div className="flex-1 min-w-0 flex items-center">
+          {isMarked ? (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                inputRef.current?.focus();
+                if (onFocusField && fieldName) onFocusField(fieldName);
+              }}
+              className={`inline-flex items-center px-2 py-0.5 rounded-md border text-xs font-mono font-medium transition-all ${
+                fullWidthPill ? 'w-full' : 'max-w-full'
+              }`}
+              style={{
+                backgroundColor: activeConfig.bg,
+                borderColor: `${activeConfig.color}66`,
+                borderBottom: `2.5px solid ${activeConfig.color}`,
+                boxShadow: `0 2px 8px ${activeConfig.glow}`,
+              }}
+            >
+              <input
+                ref={inputRef}
+                type="text"
+                value={displayValue}
+                onChange={handleChange}
+                onFocus={handleFocus}
+                onBlur={() => setIsFocused(false)}
+                placeholder={placeholder}
+                className={`bg-transparent outline-none text-[#FFFEFD] placeholder-[#97918D]/50 font-mono text-xs ${
+                  fullWidthPill ? 'w-full' : ''
+                } ${inputClassName}`}
+                style={{
+                  color: '#FFFEFD',
+                  caretColor: activeConfig.color,
+                  minWidth: '4ch',
+                  width: fullWidthPill ? '100%' : `${Math.max(displayValue.length + 1, 4)}ch`,
+                  maxWidth: '100%'
+                }}
+              />
+            </div>
+          ) : (
             <input
               ref={inputRef}
               type="text"
@@ -327,29 +367,68 @@ function MarkedField({
               onFocus={handleFocus}
               onBlur={() => setIsFocused(false)}
               placeholder={placeholder}
-              className={`bg-transparent outline-none text-[#FFFEFD] placeholder-[#97918D]/50 font-mono text-xs ${
-                fullWidthPill ? 'w-full' : ''
-              } ${inputClassName}`}
-              style={{
-                color: '#FFFEFD',
-                caretColor: activeConfig.color,
-                minWidth: '4ch',
-                width: fullWidthPill ? '100%' : `${Math.max(displayValue.length + 1, 4)}ch`,
-                maxWidth: '100%'
-              }}
+              className={`w-full bg-transparent px-2 text-[#FFFEFD] font-mono text-xs outline-none placeholder-[#97918D]/50 ${inputClassName}`}
             />
+          )}
+        </div>
+
+        {/* Delete / Clear button with confirmation popover */}
+        {hasContent && (
+          <div className="relative shrink-0 flex items-center">
+            <button
+              type="button"
+              title={`Excluir valor de ${label || fieldName}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(prev => !prev);
+              }}
+              className="p-1 rounded-md text-[#97918D]/60 hover:text-[#EF4444] hover:bg-[#EF4444]/15 transition-all cursor-pointer opacity-60 hover:opacity-100"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Small Confirmation Popover */}
+            {showDeleteConfirm && (
+              <div 
+                ref={confirmRef}
+                onClick={(e) => e.stopPropagation()}
+                className="absolute z-50 right-0 top-full mt-2 w-64 bg-[#251E1A] border border-[#EF4444]/60 rounded-xl p-3 shadow-2xl animate-fadeIn backdrop-blur-md text-xs font-mono"
+              >
+                <div className="flex items-center gap-1.5 text-[#FFFEFD] font-semibold mb-1">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#EF4444] shrink-0" />
+                  <span className="truncate">Remover este valor?</span>
+                </div>
+                <p className="text-[10px] text-[#BCB4AD] mb-3 leading-snug">
+                  O valor será limpo e o destaque correspondente no documento será desvinculado.
+                </p>
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="px-2 py-1 rounded bg-[#382E27] hover:bg-[#4A3D34] text-[#BCB4AD] text-[10px] font-medium transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      const delFn = colorContext?.onDelete;
+                      if (delFn && fieldName) {
+                        delFn(fieldName);
+                      } else {
+                        onChange('');
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded bg-[#DC2626] hover:bg-[#EF4444] text-[#FFFEFD] text-[10px] font-bold transition-colors shadow flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    <span>Excluir</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        ) : (
-          <input
-            ref={inputRef}
-            type="text"
-            value={displayValue}
-            onChange={handleChange}
-            onFocus={handleFocus}
-            onBlur={() => setIsFocused(false)}
-            placeholder={placeholder}
-            className={`w-full bg-transparent px-2 text-[#FFFEFD] font-mono text-xs outline-none placeholder-[#97918D]/50 ${inputClassName}`}
-          />
         )}
       </div>
     </div>
@@ -367,7 +446,8 @@ export default function ExtractionForm({
   onReExtract = null,
   isReExtracting = false,
   editedFields: propEditedFields = null,
-  focusedField = null
+  focusedField = null,
+  onDeleteField = null
 }) {
   const [copiedField, setCopiedField] = useState(null);
   const [showAdvancedAmounts, setShowAdvancedAmounts] = useState(false);
@@ -445,8 +525,9 @@ export default function ExtractionForm({
     spanColorMap,
     editedFields,
     onUserEdit: handleUserEdit,
-    onFocusField: onFocusField
-  }), [spanColorMap, editedFields, onFocusField]);
+    onFocusField: onFocusField,
+    onDelete: onDeleteField
+  }), [spanColorMap, editedFields, onFocusField, onDeleteField]);
 
   // Bidirectional Synchronization: Scroll & Focus input when focusedField changes from left column
   useEffect(() => {
