@@ -30,9 +30,10 @@ venv/
 ENV/
 .venv/
 
-# Production builds
+# Production builds & runtime doc outputs
 frontend/dist/
 frontend/dist-ssr/
+backend/outputs/doc_*
 *.local
 
 # Environment variables & secrets
