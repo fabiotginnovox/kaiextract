@@ -249,47 +249,61 @@ export function extractDocumentClientSide(text, userHint = null) {
   // 2. Build Grounding Spans with Fuzzy OCR Matcher
   const targets = [
     { field: 'condominio_nome', value: doc.condominio_nome, color: '#38BDF8', label: 'Condomínio' },
-    { field: 'condominio_cnpj', value: doc.condominio_cnpj, color: '#0EA5E9', label: 'CNPJ Condomínio' },
+    { field: 'condominio_cnpj', value: doc.condominio_cnpj, color: '#06B6D4', label: 'CNPJ Condomínio' },
     { field: 'condominio_endereco', value: doc.condominio_endereco, color: '#93C5FD', label: 'End. Condomínio' },
     { field: 'fornecedor_nome', value: doc.fornecedor_nome, color: '#A78BFA', label: 'Fornecedor' },
     { field: 'fornecedor_cnpj', value: doc.fornecedor_cnpj, color: '#C084FC', label: 'CNPJ Fornecedor' },
     { field: 'fornecedor_endereco', value: doc.fornecedor_endereco, color: '#E879F9', label: 'End. Fornecedor' },
-    { field: 'fornecedor_contato', value: doc.fornecedor_contato, color: '#A3E635', label: 'Contato' },
+    { field: 'fornecedor_contato', value: doc.fornecedor_contato, color: '#84CC16', label: 'Contato' },
     { field: 'valor_total', value: doc.valor_total, color: '#FBBF24', label: 'Valor Total' },
+    { field: 'valor_desconto', value: doc.valor_desconto, color: '#10B981', label: 'Valor Desconto' },
+    { field: 'valor_acrescimo', value: doc.valor_acrescimo, color: '#F97316', label: 'Valor Acréscimo' },
     { field: 'data_vencimento', value: doc.data_vencimento, color: '#F472B6', label: 'Vencimento' },
     { field: 'data_emissao', value: doc.data_emissao, color: '#818CF8', label: 'Emissão' },
-    { field: 'proxima_leitura', value: doc.proxima_leitura, color: '#818CF8', label: 'Próxima Leitura' },
-    { field: 'leitura_atual', value: doc.leitura_atual, color: '#A78BFA', label: 'Leitura Atual' },
-    { field: 'leitura_anterior', value: doc.leitura_anterior, color: '#A78BFA', label: 'Leitura Anterior' },
-    { field: 'numero_medidor', value: doc.numero_medidor, color: '#60A5FA', label: 'Nº Medidor' },
+    { field: 'proxima_leitura', value: doc.proxima_leitura, color: '#2DD4BF', label: 'Próxima Leitura' },
+    { field: 'leitura_atual', value: doc.leitura_atual, color: '#A3E635', label: 'Leitura Atual' },
+    { field: 'leitura_anterior', value: doc.leitura_anterior, color: '#D946EF', label: 'Leitura Anterior' },
+    { field: 'numero_medidor', value: doc.numero_medidor, color: '#F43F5E', label: 'Nº Medidor' },
     { field: 'linha_digitavel', value: doc.linha_digitavel, color: '#34D399', label: 'Linha Digitável' },
     { field: 'multa_atraso', value: doc.multa_atraso, color: '#FB7185', label: 'Multa Prevista' },
     { field: 'juros_dia', value: doc.juros_dia, color: '#FB923C', label: 'Juros/Dia' },
-    { field: 'protocolo_autorizacao', value: doc.protocolo_autorizacao, color: '#60A5FA', label: 'Protocolo' },
+    { field: 'protocolo_autorizacao', value: doc.protocolo_autorizacao, color: '#EC4899', label: 'Protocolo' },
     { field: 'numero_documento', value: doc.numero_documento, color: '#60A5FA', label: 'Nº Doc / NF-e' },
-    { field: 'chave_acesso', value: doc.chave_acesso, color: '#38BDF8', label: 'Chave de Acesso' },
-    { field: 'codigo_instalacao', value: doc.codigo_instalacao, color: '#A78BFA', label: 'Cód. Instalação' },
-    { field: 'nosso_numero', value: doc.nosso_numero, color: '#38BDF8', label: 'Nosso Nº' },
-    { field: 'chave_pix', value: doc.chave_pix, color: '#2DD4BF', label: 'Chave PIX' }
+    { field: 'nosso_numero', value: doc.nosso_numero, color: '#4F46E5', label: 'Nosso Nº' },
+    { field: 'codigo_instalacao', value: doc.codigo_instalacao, color: '#9333EA', label: 'Cód. Instalação' },
+    { field: 'chave_acesso', value: doc.chave_acesso, color: '#0284C7', label: 'Chave de Acesso' },
+    { field: 'chave_pix', value: doc.chave_pix, color: '#14B8A6', label: 'Chave PIX' }
   ];
+
+  // Dynamic pool of distinct non-repeating colors for custom user-requested fields
+  const DYNAMIC_PALETTE = [
+    '#84CC16', '#D946EF', '#06B6D4', '#F97316', '#EC4899', '#14B8A6',
+    '#F59E0B', '#A855F7', '#F43F5E', '#10B981', '#EAB308', '#6366F1',
+    '#2DD4BF', '#9333EA', '#0284C7', '#A3E635'
+  ];
+  const usedColors = new Set(targets.filter(t => t.value).map(t => t.color.toUpperCase()));
+  let dynColorIdx = 0;
 
   // Add any dynamic custom entities requested by the user
   const knownKeys = new Set(targets.map(t => t.field));
   Object.keys(doc).forEach(k => {
     if (!knownKeys.has(k) && doc[k] && String(doc[k]).trim()) {
       const labelFormatted = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const kLower = k.toLowerCase();
-      let color = '#A78BFA';
-      if (['telefone', 'contato', 'fone', 'ouvidoria', 'gratuita'].some(w => kLower.includes(w))) {
-        color = '#A78BFA';
-      } else if (['data', 'leitura', 'emissao', 'vencimento'].some(w => kLower.includes(w))) {
-        color = '#818CF8';
-      } else if (['valor', 'total', 'preco', 'desconto', 'taxa'].some(w => kLower.includes(w))) {
-        color = '#FBBF24';
-      } else if (['codigo', 'instalacao', 'medidor', 'doc', 'protocolo', 'chave'].some(w => kLower.includes(w))) {
-        color = '#60A5FA';
+      let chosenColor = null;
+      for (let i = 0; i < DYNAMIC_PALETTE.length; i++) {
+        const cand = DYNAMIC_PALETTE[dynColorIdx % DYNAMIC_PALETTE.length];
+        dynColorIdx++;
+        if (!usedColors.has(cand.toUpperCase())) {
+          chosenColor = cand;
+          break;
+        }
       }
-      targets.push({ field: k, value: doc[k], color, label: labelFormatted });
+      if (!chosenColor) {
+        chosenColor = DYNAMIC_PALETTE[dynColorIdx % DYNAMIC_PALETTE.length];
+        dynColorIdx++;
+      }
+      usedColors.add(chosenColor.toUpperCase());
+      targets.push({ field: k, value: doc[k], color: chosenColor, label: labelFormatted });
     }
   });
 

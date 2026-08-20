@@ -485,47 +485,58 @@ class KaiExtractorCore:
         spans = []
         targets = [
             ("condominio_nome", data.get("condominio_nome"), "#38bdf8", "Condomínio"),
-            ("condominio_cnpj", data.get("condominio_cnpj"), "#38bdf8", "CNPJ Condomínio"),
-            ("condominio_endereco", data.get("condominio_endereco"), "#38bdf8", "End. Condomínio"),
+            ("condominio_cnpj", data.get("condominio_cnpj"), "#06b6d4", "CNPJ Condomínio"),
+            ("condominio_endereco", data.get("condominio_endereco"), "#93c5fd", "End. Condomínio"),
             ("fornecedor_nome", data.get("fornecedor_nome"), "#a78bfa", "Fornecedor"),
-            ("fornecedor_cnpj", data.get("fornecedor_cnpj"), "#a78bfa", "CNPJ Fornecedor"),
-            ("fornecedor_endereco", data.get("fornecedor_endereco"), "#c084fc", "End. Fornecedor"),
-            ("fornecedor_contato", data.get("fornecedor_contato"), "#a78bfa", "Contato"),
+            ("fornecedor_cnpj", data.get("fornecedor_cnpj"), "#c084fc", "CNPJ Fornecedor"),
+            ("fornecedor_endereco", data.get("fornecedor_endereco"), "#e879f9", "End. Fornecedor"),
+            ("fornecedor_contato", data.get("fornecedor_contato"), "#84cc16", "Contato"),
             ("valor_total", data.get("valor_total"), "#fbbf24", "Valor Total"),
+            ("valor_desconto", data.get("valor_desconto"), "#10b981", "Valor Desconto"),
+            ("valor_acrescimo", data.get("valor_acrescimo"), "#f97316", "Valor Acréscimo"),
             ("data_vencimento", data.get("data_vencimento"), "#f472b6", "Vencimento"),
             ("data_emissao", data.get("data_emissao"), "#818cf8", "Emissão"),
             ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
             ("multa_atraso", data.get("multa_atraso"), "#fb7185", "Multa Prevista"),
             ("juros_dia", data.get("juros_dia"), "#fb923c", "Juros/Dia"),
-            ("proxima_leitura", data.get("proxima_leitura"), "#818cf8", "Próxima Leitura"),
-            ("leitura_atual", data.get("leitura_atual"), "#a78bfa", "Leitura Atual"),
-            ("leitura_anterior", data.get("leitura_anterior"), "#a78bfa", "Leitura Anterior"),
-            ("numero_medidor", data.get("numero_medidor"), "#60a5fa", "Nº Medidor"),
-            ("protocolo_autorizacao", data.get("protocolo_autorizacao"), "#60a5fa", "Protocolo"),
+            ("proxima_leitura", data.get("proxima_leitura"), "#2dd4bf", "Próxima Leitura"),
+            ("leitura_atual", data.get("leitura_atual"), "#a3e635", "Leitura Atual"),
+            ("leitura_anterior", data.get("leitura_anterior"), "#d946ef", "Leitura Anterior"),
+            ("numero_medidor", data.get("numero_medidor"), "#f43f5e", "Nº Medidor"),
+            ("protocolo_autorizacao", data.get("protocolo_autorizacao"), "#ec4899", "Protocolo"),
             ("numero_documento", data.get("numero_documento"), "#60a5fa", "Nº Doc / NF-e"),
-            ("nosso_numero", data.get("nosso_numero"), "#38bdf8", "Nosso Nº"),
-            ("codigo_instalacao", data.get("codigo_instalacao"), "#a78bfa", "Cód. Instalação"),
-            ("chave_acesso", data.get("chave_acesso"), "#38bdf8", "Chave de Acesso"),
-            ("chave_pix", data.get("chave_pix"), "#2dd4bf", "Chave PIX")
+            ("nosso_numero", data.get("nosso_numero"), "#4f46e5", "Nosso Nº"),
+            ("codigo_instalacao", data.get("codigo_instalacao"), "#9333ea", "Cód. Instalação"),
+            ("chave_acesso", data.get("chave_acesso"), "#0284c7", "Chave de Acesso"),
+            ("chave_pix", data.get("chave_pix"), "#14b8a6", "Chave PIX")
         ]
 
-        # Add any dynamic custom entities requested by the user
+        # Dynamic pool of distinct non-repeating colors for custom user-requested fields
+        DYNAMIC_PALETTE = [
+            "#84cc16", "#d946ef", "#06b6d4", "#f97316", "#ec4899", "#14b8a6", 
+            "#f59e0b", "#a855f7", "#f43f5e", "#10b981", "#eab308", "#6366f1",
+            "#2dd4bf", "#9333ea", "#0284c7", "#a3e635"
+        ]
+        used_colors = set(t[2].lower() for t in targets if t[1])
+        dyn_color_idx = 0
+
+        # Add any dynamic custom entities requested by the user with distinct colors
         known_keys = set(t[0] for t in targets)
         for k, v in data.items():
             if k not in known_keys and v and str(v).strip():
                 label_formatted = k.replace("_", " ").title()
-                k_l = k.lower()
-                if any(w in k_l for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
-                    color = "#a78bfa"
-                elif any(w in k_l for w in ["data", "leitura", "emissao", "vencimento"]):
-                    color = "#818cf8"
-                elif any(w in k_l for w in ["valor", "total", "preco", "desconto", "taxa"]):
-                    color = "#fbbf24"
-                elif any(w in k_l for w in ["codigo", "instalacao", "medidor", "doc", "protocolo", "chave"]):
-                    color = "#60a5fa"
-                else:
-                    color = "#a78bfa"
-                targets.append((k, str(v).strip(), color, label_formatted))
+                chosen_color = None
+                for _ in range(len(DYNAMIC_PALETTE)):
+                    cand = DYNAMIC_PALETTE[dyn_color_idx % len(DYNAMIC_PALETTE)]
+                    dyn_color_idx += 1
+                    if cand.lower() not in used_colors:
+                        chosen_color = cand
+                        break
+                if not chosen_color:
+                    chosen_color = DYNAMIC_PALETTE[dyn_color_idx % len(DYNAMIC_PALETTE)]
+                    dyn_color_idx += 1
+                used_colors.add(chosen_color.lower())
+                targets.append((k, str(v).strip(), chosen_color, label_formatted))
 
         def _fuzzy_ocr_search(src_text: str, target: str):
             if not target or len(str(target).strip()) < 2:

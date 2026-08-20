@@ -37,32 +37,62 @@ const CATEGORIAS_PADRAO = [
 
 export const GROUNDING_CONFIG = {
   condominio: {
-    color: '#38BDF8', // Sky / Cyan
+    color: '#38BDF8', // Sky Blue
     bg: 'rgba(56, 189, 248, 0.15)',
     glow: 'rgba(56, 189, 248, 0.25)',
   },
+  condominio_cnpj: {
+    color: '#06B6D4', // Cyan
+    bg: 'rgba(6, 182, 212, 0.15)',
+    glow: 'rgba(6, 182, 212, 0.25)',
+  },
+  condominio_endereco: {
+    color: '#93C5FD', // Light Blue
+    bg: 'rgba(147, 197, 253, 0.15)',
+    glow: 'rgba(147, 197, 253, 0.25)',
+  },
   fornecedor: {
-    color: '#A78BFA', // Purple / Violet
+    color: '#A78BFA', // Purple
     bg: 'rgba(167, 139, 250, 0.15)',
     glow: 'rgba(167, 139, 250, 0.25)',
   },
   fornecedor_cnpj: {
-    color: '#A78BFA', // Purple / Violet
-    bg: 'rgba(167, 139, 250, 0.12)',
-    glow: 'rgba(167, 139, 250, 0.2)',
-  },
-  endereco: {
     color: '#C084FC', // Lavender
     bg: 'rgba(192, 132, 252, 0.15)',
     glow: 'rgba(192, 132, 252, 0.25)',
   },
+  fornecedor_endereco: {
+    color: '#E879F9', // Fuchsia
+    bg: 'rgba(232, 121, 249, 0.15)',
+    glow: 'rgba(232, 121, 249, 0.25)',
+  },
+  endereco: {
+    color: '#E879F9', // Fuchsia
+    bg: 'rgba(232, 121, 249, 0.15)',
+    glow: 'rgba(232, 121, 249, 0.25)',
+  },
+  contato: {
+    color: '#84CC16', // Lime
+    bg: 'rgba(132, 204, 22, 0.15)',
+    glow: 'rgba(132, 204, 22, 0.25)',
+  },
+  fornecedor_contato: {
+    color: '#84CC16', // Lime
+    bg: 'rgba(132, 204, 22, 0.15)',
+    glow: 'rgba(132, 204, 22, 0.25)',
+  },
   valor: {
-    color: '#FBBF24', // Amber / Gold / Yellow
+    color: '#FBBF24', // Gold
     bg: 'rgba(251, 191, 36, 0.15)',
     glow: 'rgba(251, 191, 36, 0.25)',
   },
+  valor_desconto: {
+    color: '#10B981', // Emerald
+    bg: 'rgba(16, 185, 129, 0.15)',
+    glow: 'rgba(16, 185, 129, 0.25)',
+  },
   vencimento: {
-    color: '#F472B6', // Pink / Magenta
+    color: '#F472B6', // Pink
     bg: 'rgba(244, 114, 182, 0.15)',
     glow: 'rgba(244, 114, 182, 0.25)',
   },
@@ -72,74 +102,74 @@ export const GROUNDING_CONFIG = {
     glow: 'rgba(129, 140, 248, 0.25)',
   },
   num_doc: {
-    color: '#60A5FA', // Sky / Blue
+    color: '#60A5FA', // Cornflower Blue
+    bg: 'rgba(96, 165, 250, 0.15)',
+    glow: 'rgba(96, 165, 250, 0.25)',
+  },
+  numero_documento: {
+    color: '#60A5FA', // Cornflower Blue
     bg: 'rgba(96, 165, 250, 0.15)',
     glow: 'rgba(96, 165, 250, 0.25)',
   },
   protocolo_autorizacao: {
-    color: '#60A5FA', // Sky / Blue
-    bg: 'rgba(96, 165, 250, 0.15)',
-    glow: 'rgba(96, 165, 250, 0.25)',
+    color: '#EC4899', // Hot Pink
+    bg: 'rgba(236, 72, 153, 0.15)',
+    glow: 'rgba(236, 72, 153, 0.25)',
   },
   chave_acesso: {
-    color: '#38BDF8', // Cyan / Sky
-    bg: 'rgba(56, 189, 248, 0.15)',
-    glow: 'rgba(56, 189, 248, 0.25)',
+    color: '#0284C7', // Ocean Blue
+    bg: 'rgba(2, 132, 199, 0.15)',
+    glow: 'rgba(2, 132, 199, 0.25)',
   },
   codigo_instalacao: {
-    color: '#A78BFA', // Purple
-    bg: 'rgba(167, 139, 250, 0.15)',
-    glow: 'rgba(167, 139, 250, 0.25)',
+    color: '#9333EA', // Deep Violet
+    bg: 'rgba(147, 51, 234, 0.15)',
+    glow: 'rgba(147, 51, 234, 0.25)',
   },
   proxima_leitura: {
-    color: '#818CF8', // Indigo
-    bg: 'rgba(129, 140, 248, 0.15)',
-    glow: 'rgba(129, 140, 248, 0.25)',
+    color: '#2DD4BF', // Teal
+    bg: 'rgba(45, 212, 191, 0.15)',
+    glow: 'rgba(45, 212, 191, 0.25)',
   },
   leitura_atual: {
-    color: '#A78BFA', // Purple
-    bg: 'rgba(167, 139, 250, 0.15)',
-    glow: 'rgba(167, 139, 250, 0.25)',
+    color: '#A3E635', // Chartreuse
+    bg: 'rgba(163, 230, 53, 0.15)',
+    glow: 'rgba(163, 230, 53, 0.25)',
   },
   leitura_anterior: {
-    color: '#A78BFA', // Purple
-    bg: 'rgba(167, 139, 250, 0.15)',
-    glow: 'rgba(167, 139, 250, 0.25)',
+    color: '#D946EF', // Magenta
+    bg: 'rgba(217, 70, 239, 0.15)',
+    glow: 'rgba(217, 70, 239, 0.25)',
   },
   numero_medidor: {
-    color: '#60A5FA', // Sky
-    bg: 'rgba(96, 165, 250, 0.15)',
-    glow: 'rgba(96, 165, 250, 0.25)',
+    color: '#F43F5E', // Ruby Rose
+    bg: 'rgba(244, 63, 94, 0.15)',
+    glow: 'rgba(244, 63, 94, 0.25)',
   },
   nosso_numero: {
-    color: '#38BDF8', // Sky
-    bg: 'rgba(56, 189, 248, 0.15)',
-    glow: 'rgba(56, 189, 248, 0.25)',
-  },
-  condominio_cnpj: {
-    color: '#0EA5E9', // Cyan
-    bg: 'rgba(14, 165, 233, 0.15)',
-    glow: 'rgba(14, 165, 233, 0.25)',
+    color: '#4F46E5', // Deep Indigo
+    bg: 'rgba(79, 70, 229, 0.15)',
+    glow: 'rgba(79, 70, 229, 0.25)',
   },
   juros: {
-    color: '#FB923C', // Orange
+    color: '#FB923C', // Tangerine Orange
     bg: 'rgba(251, 146, 60, 0.15)',
     glow: 'rgba(251, 146, 60, 0.25)',
   },
   multa: {
-    color: '#FB7185', // Rose / Salmon
+    color: '#FB7185', // Coral Rose
     bg: 'rgba(251, 113, 133, 0.15)',
     glow: 'rgba(251, 113, 133, 0.25)',
   },
   linha: {
-    color: '#34D399', // Emerald
+    color: '#34D399', // Mint Emerald
     bg: 'rgba(52, 211, 153, 0.15)',
     glow: 'rgba(52, 211, 153, 0.25)',
   },
   pix: {
-    color: '#2DD4BF', // Teal
-    bg: 'rgba(45, 212, 191, 0.15)',
-    glow: 'rgba(45, 212, 191, 0.25)',
+    color: '#14B8A6', // Aqua Teal
+    bg: 'rgba(20, 184, 166, 0.15)',
+    glow: 'rgba(20, 184, 166, 0.25)',
   }
 };
 
