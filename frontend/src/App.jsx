@@ -13,6 +13,12 @@ export default function App() {
   const [erpDestino, setErpDestino] = useState('superlogica'); // 'superlogica' | 'condominia' | 'universal'
   const [samples, setSamples] = useState([]);
   const [focusedField, setFocusedField] = useState(null);
+
+  const handleFocusField = (field, source = 'unknown') => {
+    if (!field) return;
+    const name = typeof field === 'object' ? field.field : field;
+    setFocusedField({ field: name, source, ts: Date.now() });
+  };
   const [currentDoc, setCurrentDoc] = useState({
     docId: '',
     rawText: '',
@@ -407,7 +413,7 @@ export default function App() {
                 groundingSpans={currentDoc.groundingSpans}
                 focusedField={focusedField}
                 onManualGrounding={handleManualGrounding}
-                onFocusField={setFocusedField}
+                onFocusField={(f) => handleFocusField(f, 'viewer')}
                 onReExtract={handleReExtract}
                 isReExtracting={isReExtracting}
                 editedFields={editedFields}
@@ -422,7 +428,7 @@ export default function App() {
                 onSync={handleSync}
                 onReset={handleReset}
                 erpDestino={erpDestino}
-                onFocusField={setFocusedField}
+                onFocusField={(f) => handleFocusField(f, 'form')}
                 groundingSpans={currentDoc.groundingSpans}
                 onReExtract={handleReExtract}
                 isReExtracting={isReExtracting}

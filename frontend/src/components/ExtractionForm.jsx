@@ -252,15 +252,17 @@ function MarkedField({
 
   const handleFocus = () => {
     setIsFocused(true);
-    if (onFocusField && fieldName) {
-      onFocusField(fieldName);
+    const fn = onFocusField || colorContext?.onFocusField;
+    if (fn && fieldName) {
+      fn(fieldName, 'form');
     }
   };
 
   const handleClick = () => {
     inputRef.current?.focus();
-    if (onFocusField && fieldName) {
-      onFocusField(fieldName);
+    const fn = onFocusField || colorContext?.onFocusField;
+    if (fn && fieldName) {
+      fn(fieldName, 'form');
     }
   };
 
@@ -442,20 +444,27 @@ export default function ExtractionForm({
   const colorContextValue = useMemo(() => ({
     spanColorMap,
     editedFields,
-    onUserEdit: handleUserEdit
-  }), [spanColorMap, editedFields]);
+    onUserEdit: handleUserEdit,
+    onFocusField: onFocusField
+  }), [spanColorMap, editedFields, onFocusField]);
 
   // Bidirectional Synchronization: Scroll & Focus input when focusedField changes from left column
   useEffect(() => {
     if (!focusedField) return;
+    const source = typeof focusedField === 'object' ? focusedField.source : 'viewer';
+    if (source !== 'viewer') return;
+
+    const rawField = typeof focusedField === 'object' ? focusedField.field : focusedField;
+    if (!rawField) return;
 
     const aliases = {
       fornecedor_endereco: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
       endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
       condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
       endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
-      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
-      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
+      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      telefone_ligacao_gratuita: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
       fornecedor_nome: ['fornecedor_nome', 'fornecedor'],
       condominio_nome: ['condominio_nome', 'condominio'],
       fornecedor_cnpj: ['fornecedor_cnpj', 'cnpj_fornecedor'],
@@ -479,16 +488,16 @@ export default function ExtractionForm({
       nosso_numero: ['nosso_numero']
     };
 
-    const fLower = String(focusedField).toLowerCase();
+    const fLower = String(rawField).toLowerCase();
     // Auto-expand accordions if target field is inside them
     if (['valor_original', 'valor_desconto', 'valor_acrescimo', 'multa_atraso', 'juros_dia', 'multa', 'juros'].some(f => fLower.includes(f))) {
       setShowAdvancedAmounts(true);
     }
-    if (['endereco', 'contato', 'emissao', 'documento', 'medidor', 'leitura', 'instalacao', 'chave', 'protocolo', 'nosso'].some(f => fLower.includes(f))) {
+    if (['endereco', 'contato', 'emissao', 'documento', 'medidor', 'leitura', 'instalacao', 'chave', 'protocolo', 'nosso', 'telefone'].some(f => fLower.includes(f))) {
       setShowAdditionalDetails(true);
     }
 
-    const candList = [...(aliases[focusedField] || [focusedField])];
+    const candList = [...(aliases[rawField] || [rawField])];
 
     const timer = setTimeout(() => {
       let targetEl = null;

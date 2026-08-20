@@ -295,16 +295,20 @@ export default function GroundingViewer({
 
   const resolveTargetElement = (field) => {
     if (!field) return null;
-    let el = document.getElementById(`grounding-${field}`);
+    const rawKey = String(field).trim();
+    let el = document.getElementById(`grounding-${rawKey}`);
     if (el) return el;
 
+    const normKey = rawKey.toLowerCase().replace(/[\s_-]+/g, '');
+
     const aliases = {
-      fornecedor_endereco: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
-      endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
-      condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
-      endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
-      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
-      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
+      fornecedor_endereco: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco', 'end_fornecedor'],
+      endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco', 'end_fornecedor'],
+      condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio', 'end_condominio'],
+      endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio', 'end_condominio'],
+      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
+      telefone_ligacao_gratuita: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita'],
       fornecedor_nome: ['fornecedor_nome', 'fornecedor'],
       condominio_nome: ['condominio_nome', 'condominio'],
       fornecedor_cnpj: ['fornecedor_cnpj', 'cnpj_fornecedor'],
@@ -316,21 +320,40 @@ export default function GroundingViewer({
       multa_atraso: ['multa_atraso', 'multa'],
       juros_dia: ['juros_dia', 'juros'],
       linha_digitavel: ['linha_digitavel', 'linha'],
-      chave_pix: ['chave_pix', 'pix']
+      chave_pix: ['chave_pix', 'pix'],
+      proxima_leitura: ['proxima_leitura', 'leitura'],
+      leitura_atual: ['leitura_atual'],
+      leitura_anterior: ['leitura_anterior'],
+      numero_medidor: ['numero_medidor', 'medidor'],
+      codigo_instalacao: ['codigo_instalacao', 'instalacao'],
+      chave_acesso: ['chave_acesso'],
+      nosso_numero: ['nosso_numero']
     };
 
-    const candList = [...(aliases[field] || [field])];
-    if (field.includes('telefone') || field.includes('contato') || field.includes('fone')) {
-      candList.push('fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone');
+    const candList = [...(aliases[rawKey] || [rawKey])];
+    if (normKey.includes('telefone') || normKey.includes('contato') || normKey.includes('fone') || normKey.includes('gratuita')) {
+      candList.push('fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita');
     }
-    if (field.includes('leitura')) {
+    if (normKey.includes('leitura')) {
       candList.push('proxima_leitura', 'leitura_atual', 'leitura_anterior');
     }
-    if (field.includes('medidor')) {
+    if (normKey.includes('medidor')) {
       candList.push('numero_medidor');
     }
-    if (field.includes('chave')) {
+    if (normKey.includes('chave')) {
       candList.push('chave_acesso', 'chave_pix');
+    }
+    if (normKey.includes('protocolo')) {
+      candList.push('protocolo_autorizacao', 'protocolo');
+    }
+    if (normKey.includes('instalacao')) {
+      candList.push('codigo_instalacao');
+    }
+    if (normKey.includes('condominio')) {
+      candList.push('condominio_nome', 'condominio_cnpj', 'condominio_endereco');
+    }
+    if (normKey.includes('fornecedor')) {
+      candList.push('fornecedor_nome', 'fornecedor_cnpj', 'fornecedor_endereco', 'fornecedor_contato');
     }
 
     for (const cand of candList) {
@@ -342,12 +365,25 @@ export default function GroundingViewer({
       if (el) return el;
     }
 
+    // Check all marks in renderer matching normalized field or title
+    const allMarks = document.querySelectorAll('.kai-html-renderer mark');
+    for (const mark of allMarks) {
+      const markIdNorm = (mark.id || '').replace('grounding-', '').toLowerCase().replace(/[\s_-]+/g, '');
+      const markTitleNorm = (mark.getAttribute('title') || '').toLowerCase().replace(/[\s_-]+/g, '');
+      if (markIdNorm && (markIdNorm === normKey || normKey.includes(markIdNorm) || markIdNorm.includes(normKey))) {
+        return mark;
+      }
+      if (markTitleNorm && (markTitleNorm === normKey || normKey.includes(markTitleNorm) || markTitleNorm.includes(normKey))) {
+        return mark;
+      }
+    }
+
     // Fallback: check matching span from groundingSpans
-    const matchedSpan = (groundingSpans || []).find(s => 
-      s.field === field || 
-      (s.field && s.field.includes(field)) ||
-      (field && field.includes(s.field))
-    );
+    const matchedSpan = (groundingSpans || []).find(s => {
+      const sNorm = (s.field || '').toLowerCase().replace(/[\s_-]+/g, '');
+      const lNorm = (s.label || '').toLowerCase().replace(/[\s_-]+/g, '');
+      return sNorm === normKey || lNorm === normKey || sNorm.includes(normKey) || normKey.includes(sNorm);
+    });
     if (matchedSpan && matchedSpan.field) {
       el = document.getElementById(`grounding-${matchedSpan.field}`);
       if (el) return el;
@@ -359,6 +395,10 @@ export default function GroundingViewer({
   };
 
   const highlightAndScroll = (field) => {
+    if (!field) return;
+    const rawKey = typeof field === 'object' ? field.field : field;
+    if (!rawKey) return;
+
     const marks = document.querySelectorAll('.kai-html-renderer mark');
     marks.forEach(m => {
       m.classList.remove('active-scroll');
@@ -369,17 +409,34 @@ export default function GroundingViewer({
       }
     });
 
-    const target = resolveTargetElement(field);
+    const target = resolveTargetElement(rawKey);
     if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // 1. Direct container scroll (accurate & guaranteed across all browsers)
+      if (containerRef.current) {
+        const container = containerRef.current;
+        const targetRect = target.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - (container.clientHeight / 2) + (targetRect.height / 2);
+        container.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: 'smooth'
+        });
+      }
+      
+      // 2. Also call native scrollIntoView
+      try {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch (e) {}
+
       target.classList.add('active-scroll');
       const dot = target.querySelector('.blink-dot');
       if (dot) {
         dot.classList.add('active');
         const isFieldEdited = Boolean(
           editedFields && (
-            editedFields[field] ||
-            editedFields[field.toLowerCase()] ||
+            editedFields[rawKey] ||
+            editedFields[rawKey.toLowerCase()] ||
             (target.id && editedFields[target.id.replace('grounding-', '')])
           )
         );
@@ -394,14 +451,15 @@ export default function GroundingViewer({
 
   useEffect(() => {
     if (focusedField) {
+      const fieldName = typeof focusedField === 'object' ? focusedField.field : focusedField;
       if (activeTab === 'grounding') {
         const timer = setTimeout(() => {
-          highlightAndScroll(focusedField);
-        }, 60);
+          highlightAndScroll(fieldName);
+        }, 30);
         return () => clearTimeout(timer);
       }
     }
-  }, [focusedField, editedFields]);
+  }, [focusedField, editedFields, activeTab]);
 
   const handleSelection = () => {
     const selection = window.getSelection();
