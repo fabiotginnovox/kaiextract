@@ -184,5 +184,33 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertTrue(len(chave_spans) > 0)
         self.assertIn("2625", chave_spans[0]["matched_text"])
 
+    def test_re_extract_with_telefone_ligacao_gratuita(self):
+        neoenergia_text = (
+            "Neoenergia Pernambuco\n"
+            "NOME DO CLIENTE:\n"
+            "EDIFICIO AVIS LIBERTAS\n"
+            "TOTAL A PAGAR\n"
+            "R$ 9.024,54\n"
+            "Canais de atendimento\n"
+            "TELEFONE LIGAÇÃO GRATUITA: QSOQQ ZSI ZZ SQ ou QQ (Ligação gratuita de telefones fixos e móveis)\n"
+            "Site: neoenergia.com/pernambuco\n"
+        )
+        payload = {
+            "text": neoenergia_text,
+            "user_hint": "marque o TELEFONE LIGAÇÃO GRATUITA",
+            "doc_id": "neoenergia_tel_test"
+        }
+        res = self.client.post("/api/re-extract", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["dados_extraidos"]["telefone_ligacao_gratuita"], "QSOQQ ZSI ZZ SQ ou QQ")
+        self.assertEqual(data["dados_extraidos"]["fornecedor_contato"], "QSOQQ ZSI ZZ SQ ou QQ")
+        
+        # Check grounding span for contact/phone exists
+        spans = data["grounding_spans"]
+        tel_spans = [s for s in spans if s["field"] in ["telefone_ligacao_gratuita", "fornecedor_contato"]]
+        self.assertTrue(len(tel_spans) > 0)
+
 if __name__ == "__main__":
     unittest.main()

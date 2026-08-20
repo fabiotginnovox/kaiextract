@@ -780,6 +780,36 @@ export default function ExtractionForm({
             />
           )}
 
+          {/* Dynamic Custom Extracted Fields from AI Feedback */}
+          {Object.entries(dados || {})
+            .filter(([k, v]) => ![
+              'condominio_nome', 'condominio_cnpj', 'condominio_endereco', 'endereco_pagador',
+              'fornecedor_nome', 'fornecedor_cnpj', 'fornecedor_endereco', 'endereco_fornecedor',
+              'fornecedor_contato', 'contato_fornecedor', 'tipo_conta', 'tipo_documento',
+              'valor_total', 'valor_total_float', 'valor_original', 'valor_desconto', 'valor_acrescimo',
+              'multa_atraso', 'juros_dia', 'data_vencimento', 'data_emissao', 'banco_info',
+              'numero_documento', 'nosso_numero', 'protocolo_autorizacao', 'chave_acesso',
+              'codigo_instalacao', 'proxima_leitura', 'leitura_atual', 'leitura_anterior',
+              'numero_medidor', 'descricao_servico', 'local_pagamento', 'linha_digitavel',
+              'chave_pix', 'metodo_pagamento'
+            ].includes(k) && v && String(v).trim())
+            .map(([k, v]) => {
+              const fieldLabel = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+              return (
+                <MarkedField
+                  key={k}
+                  label={fieldLabel}
+                  value={v}
+                  onChange={(val) => onChange(k, val)}
+                  placeholder={fieldLabel}
+                  config={{ color: '#A3E635', bg: 'rgba(163, 230, 53, 0.15)', glow: 'rgba(163, 230, 53, 0.25)' }}
+                  fullWidthPill={true}
+                  onFocusField={onFocusField}
+                  fieldName={k}
+                />
+              );
+            })}
+
         </div>
       </div>
 

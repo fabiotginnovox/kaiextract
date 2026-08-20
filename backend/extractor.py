@@ -8,6 +8,7 @@ import os
 import re
 import json
 import uuid
+import unicodedata
 from typing import Dict, Any, List, Optional
 from prompts import prompt_kai_extract, few_shot_examples
 from normalizer import ERPNormalizer
@@ -416,20 +417,43 @@ class KaiExtractorCore:
         med_m = re.search(r"(?:N[°º\s]*Medidor|Medidor)[:\s\-\.]*(\d+)", text, re.IGNORECASE)
         extracted["numero_medidor"] = med_m.group(1).strip() if med_m else ""
 
-        # Dynamic Semantic Listener: If user_hint requests any arbitrary field found in the document
+        # Dynamic Universal Semantic Listener: If user_hint requests ANY field or passage in the document
         if user_hint:
-            h_clean = user_hint.lower()
-            for line in lines:
-                line_clean = line.strip()
-                # If line contains a label and a value (e.g. "PRÓXIMA LEITURA 30/06/2026", "N MEDIDOR - 81788399")
-                label_val_m = re.match(r"^([A-ZÀ-Úa-zà-ú\s\.\/°º\-_]{3,35})[:\s\-]+([0-9\/\-\.,\w]{2,50})$", line_clean)
-                if label_val_m:
-                    k, v = label_val_m.group(1).strip(), label_val_m.group(2).strip()
-                    k_words = [w for w in re.findall(r"[a-zà-ú]{3,}", k.lower()) if w not in ["para", "com", "ser", "que", "uma", "dos", "das"]]
-                    # If words of the document line label appear in user hint
-                    if k_words and any(w in h_clean for w in k_words):
-                        safe_key = re.sub(r"\W+", "_", k.lower()).strip("_")
-                        extracted[safe_key] = v
+            h_raw = user_hint.strip()
+            # Clean verbs and particles
+            clean_p = re.sub(r"^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar)\s+(?:o|a|os|as|um|uma)?\s*", "", h_raw, flags=re.IGNORECASE).strip().rstrip(".!?:")
+            clean_p_lower = clean_p.lower()
+
+            if len(clean_p_lower) >= 3:
+                matched_line = False
+                for line in lines:
+                    line_clean = line.strip()
+                    line_lower = line_clean.lower()
+                    if clean_p_lower in line_lower:
+                        matched_line = True
+                        if ":" in line_clean or " - " in line_clean:
+                            sep = ":" if ":" in line_clean else " - "
+                            parts = line_clean.split(sep, 1)
+                            k, v = parts[0].strip(), parts[1].strip()
+                            # Clean parenthetical notes if present (e.g. QSOQQ ZSI... (Ligação gratuita...))
+                            v_clean = re.split(r"[\(\[\{]", v)[0].strip() if "(" in v else v
+                            k_norm = unicodedata.normalize('NFKD', k).encode('ASCII', 'ignore').decode('utf-8')
+                            safe_key = re.sub(r"[^\w]+", "_", k_norm.lower()).strip("_")
+                            extracted[safe_key] = v_clean or v
+                            if any(w in safe_key for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
+                                extracted["fornecedor_contato"] = v_clean or v
+                        else:
+                            clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
+                            safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
+                            extracted[safe_key] = line_clean
+
+                if not matched_line:
+                    # Search substring in full text
+                    idx = text.lower().find(clean_p_lower)
+                    if idx != -1:
+                        clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
+                        safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
+                        extracted[safe_key] = text[idx:idx + len(clean_p)]
 
         # Chave PIX
         pix_m = re.search(r"(?:PIX|PIX Copia e Cola|Chave PIX)[:\s]*([0-9a-zA-Z\.\-@\+\$\#]{10,200})", text, re.IGNORECASE)

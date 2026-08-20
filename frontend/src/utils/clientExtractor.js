@@ -202,19 +202,44 @@ export function extractDocumentClientSide(text, userHint = null) {
       }
     }
 
-    // Dynamic Line Matching against prompt
-    const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
-    for (const line of lines) {
-      const lineMatch = line.match(/^([A-ZÀ-Úa-zà-ú\s\.\/°º\-_]{3,35})[:\s\-]+([0-9\/\-\.,\w]{2,50})$/);
-      if (lineMatch) {
-        const k = lineMatch[1].trim();
-        const v = lineMatch[2].trim();
-        const kWords = (k.toLowerCase().match(/[a-zà-ú]{3,}/g) || []).filter(w => !['para', 'com', 'ser', 'que', 'uma', 'dos', 'das'].includes(w));
-        if (kWords.length > 0 && kWords.some(w => hLower.includes(w))) {
-          const safeKey = k.toLowerCase().replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
-          if (!doc[safeKey]) {
-            doc[safeKey] = v;
+    // Dynamic Universal Semantic Listener for ANY requested field or document passage
+    const cleanPrompt = h.replace(/^(?:marque|marcar|selecione|selecionar|destaque|destacar|extraia|extrair|pegue|pegar|encontre|encontrar|coloque|colocar)\s+(?:o|a|os|as|um|uma)?\s*/i, '').replace(/[\.\?!:]+$/, '').trim();
+    const cleanPromptLower = cleanPrompt.toLowerCase();
+
+    if (cleanPromptLower.length >= 3) {
+      const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+      let matchedInLine = false;
+
+      for (const line of lines) {
+        const lineLower = line.toLowerCase();
+        if (lineLower.includes(cleanPromptLower)) {
+          matchedInLine = true;
+          if (line.includes(':') || line.includes(' - ')) {
+            const sep = line.includes(':') ? ':' : ' - ';
+            const colonIdx = line.indexOf(sep);
+            const k = line.substring(0, colonIdx).trim();
+            let v = line.substring(colonIdx + sep.length).trim();
+            // Remove parenthetical notes if present (e.g. QSOQQ ZSI ZZ SQ ou QQ (Ligação gratuita...))
+            const parenIdx = v.indexOf('(');
+            const cleanVal = (parenIdx !== -1 ? v.substring(0, parenIdx) : v).trim();
+            
+            const safeKey = k.toLowerCase().replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
+            doc[safeKey] = cleanVal || v;
+            if (/telefone|contato|fone|ouvidoria|gratuita/i.test(safeKey)) {
+              doc.fornecedor_contato = cleanVal || v;
+            }
+          } else {
+            const safeKey = cleanPromptLower.replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
+            doc[safeKey] = line;
           }
+        }
+      }
+
+      if (!matchedInLine) {
+        const matchPos = t.toLowerCase().indexOf(cleanPromptLower);
+        if (matchPos !== -1) {
+          const safeKey = cleanPromptLower.replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
+          doc[safeKey] = t.substring(matchPos, matchPos + cleanPrompt.length);
         }
       }
     }
