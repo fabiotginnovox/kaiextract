@@ -327,7 +327,8 @@ export default function ExtractionForm({
   onFocusField,
   groundingSpans = [],
   onReExtract = null,
-  isReExtracting = false
+  isReExtracting = false,
+  editedFields: propEditedFields = null
 }) {
   const [copiedField, setCopiedField] = useState(null);
   const [showAdvancedAmounts, setShowAdvancedAmounts] = useState(false);
@@ -384,16 +385,20 @@ export default function ExtractionForm({
     return map;
   }, [groundingSpans]);
 
-  const [editedFields, setEditedFields] = useState({});
+  const [localEditedFields, setLocalEditedFields] = useState({});
+  const editedFields = useMemo(() => ({
+    ...localEditedFields,
+    ...(propEditedFields || {})
+  }), [localEditedFields, propEditedFields]);
 
   const handleUserEdit = (fieldName) => {
     if (fieldName) {
-      setEditedFields(prev => ({ ...prev, [fieldName]: true }));
+      setLocalEditedFields(prev => ({ ...prev, [fieldName]: true }));
     }
   };
 
   const handleReset = () => {
-    setEditedFields({});
+    setLocalEditedFields({});
     if (onReset) onReset();
   };
 

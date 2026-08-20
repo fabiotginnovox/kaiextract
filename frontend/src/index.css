@@ -111,6 +111,7 @@ body {
   border-radius: 50%;
   box-shadow: 0 0 10px #10B981;
   z-index: 30;
+  pointer-events: none;
 }
 
 .blink-dot.active {
@@ -118,8 +119,19 @@ body {
   animation: kaiBlinkDot 0.9s infinite alternate;
 }
 
+.blink-dot.active.edited {
+  background-color: #FF0000 !important;
+  box-shadow: 0 0 14px #FF0000, 0 0 4px #FF0000 !important;
+  animation: kaiBlinkDotRed 0.75s infinite alternate !important;
+}
+
 @keyframes kaiBlinkDot {
   0% { opacity: 0.5; transform: scale(0.85); }
   100% { opacity: 1; transform: scale(1.4); }
+}
+
+@keyframes kaiBlinkDotRed {
+  0% { opacity: 0.6; transform: scale(0.9); box-shadow: 0 0 8px #FF0000; }
+  100% { opacity: 1; transform: scale(1.5); box-shadow: 0 0 18px #FF0000, 0 0 6px #FF0000; }
 }
 

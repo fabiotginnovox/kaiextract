@@ -43,6 +43,7 @@ export default function App() {
     }
   });
 
+  const [editedFields, setEditedFields] = useState({});
   const [syncPayload, setSyncPayload] = useState(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
@@ -241,6 +242,9 @@ export default function App() {
   };
 
   const handleFieldChange = (campo, valor) => {
+    if (campo) {
+      setEditedFields(prev => ({ ...prev, [campo]: true }));
+    }
     setCurrentDoc(prev => ({
       ...prev,
       dadosExtraidos: {
@@ -329,6 +333,7 @@ export default function App() {
   };
 
   const handleReset = () => {
+    setEditedFields({});
     setFase('upload');
     setErrorMsg(null);
   };
@@ -405,6 +410,7 @@ export default function App() {
                 onFocusField={setFocusedField}
                 onReExtract={handleReExtract}
                 isReExtracting={isReExtracting}
+                editedFields={editedFields}
               />
             </div>
 
@@ -420,6 +426,7 @@ export default function App() {
                 groundingSpans={currentDoc.groundingSpans}
                 onReExtract={handleReExtract}
                 isReExtracting={isReExtracting}
+                editedFields={editedFields}
               />
             </div>
 

@@ -219,7 +219,8 @@ export default function GroundingViewer({
   onManualGrounding,
   onFocusField,
   onReExtract,
-  isReExtracting = false
+  isReExtracting = false,
+  editedFields = {}
 }) {
   const [activeTab, setActiveTab] = useState("grounding");
   const [selectedText, setSelectedText] = useState('');
@@ -291,8 +292,8 @@ export default function GroundingViewer({
       endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
       condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
       endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
-      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato'],
-      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato'],
+      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
+      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
       fornecedor_nome: ['fornecedor_nome', 'fornecedor'],
       condominio_nome: ['condominio_nome', 'condominio'],
       fornecedor_cnpj: ['fornecedor_cnpj', 'cnpj_fornecedor'],
@@ -300,14 +301,27 @@ export default function GroundingViewer({
       valor_total: ['valor_total', 'valor'],
       data_vencimento: ['data_vencimento', 'vencimento'],
       data_emissao: ['data_emissao', 'emissao'],
-      numero_documento: ['numero_documento', 'num_doc'],
+      numero_documento: ['numero_documento', 'num_doc', 'protocolo'],
       multa_atraso: ['multa_atraso', 'multa'],
       juros_dia: ['juros_dia', 'juros'],
       linha_digitavel: ['linha_digitavel', 'linha'],
       chave_pix: ['chave_pix', 'pix']
     };
 
-    const candList = aliases[field] || [field];
+    const candList = [...(aliases[field] || [field])];
+    if (field.includes('telefone') || field.includes('contato') || field.includes('fone')) {
+      candList.push('fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone');
+    }
+    if (field.includes('leitura')) {
+      candList.push('proxima_leitura', 'leitura_atual', 'leitura_anterior');
+    }
+    if (field.includes('medidor')) {
+      candList.push('numero_medidor');
+    }
+    if (field.includes('chave')) {
+      candList.push('chave_acesso', 'chave_pix');
+    }
+
     for (const cand of candList) {
       el = document.getElementById(`grounding-${cand}`);
       if (el) return el;
@@ -316,6 +330,20 @@ export default function GroundingViewer({
       el = document.querySelector(`.kai-html-renderer mark[title*="${cand}"]`);
       if (el) return el;
     }
+
+    // Fallback: check matching span from groundingSpans
+    const matchedSpan = (groundingSpans || []).find(s => 
+      s.field === field || 
+      (s.field && s.field.includes(field)) ||
+      (field && field.includes(s.field))
+    );
+    if (matchedSpan && matchedSpan.field) {
+      el = document.getElementById(`grounding-${matchedSpan.field}`);
+      if (el) return el;
+      el = document.querySelector(`.kai-html-renderer mark[id*="${matchedSpan.field}"]`);
+      if (el) return el;
+    }
+
     return null;
   };
 
@@ -324,7 +352,10 @@ export default function GroundingViewer({
     marks.forEach(m => {
       m.classList.remove('active-scroll');
       const dot = m.querySelector('.blink-dot');
-      if (dot) dot.classList.remove('active');
+      if (dot) {
+        dot.classList.remove('active');
+        dot.classList.remove('edited');
+      }
     });
 
     const target = resolveTargetElement(field);
@@ -332,7 +363,21 @@ export default function GroundingViewer({
       target.scrollIntoView({ behavior: 'smooth', block: 'center' });
       target.classList.add('active-scroll');
       const dot = target.querySelector('.blink-dot');
-      if (dot) dot.classList.add('active');
+      if (dot) {
+        dot.classList.add('active');
+        const isFieldEdited = Boolean(
+          editedFields && (
+            editedFields[field] ||
+            editedFields[field.toLowerCase()] ||
+            (target.id && editedFields[target.id.replace('grounding-', '')])
+          )
+        );
+        if (isFieldEdited) {
+          dot.classList.add('edited');
+        } else {
+          dot.classList.remove('edited');
+        }
+      }
     }
   };
 
@@ -345,7 +390,7 @@ export default function GroundingViewer({
         return () => clearTimeout(timer);
       }
     }
-  }, [focusedField]);
+  }, [focusedField, editedFields]);
 
   const handleSelection = () => {
     const selection = window.getSelection();
