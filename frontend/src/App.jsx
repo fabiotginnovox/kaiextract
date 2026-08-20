@@ -403,6 +403,8 @@ export default function App() {
                 focusedField={focusedField}
                 onManualGrounding={handleManualGrounding}
                 onFocusField={setFocusedField}
+                onReExtract={handleReExtract}
+                isReExtracting={isReExtracting}
               />
             </div>
 
