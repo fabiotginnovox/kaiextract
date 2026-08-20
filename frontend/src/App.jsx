@@ -5,6 +5,7 @@ import GroundingViewer, { buildGroundingHtml } from './components/GroundingViewe
 import ExtractionForm from './components/ExtractionForm';
 import SuccessModal from './components/SuccessModal';
 import AuditModal from './components/AuditModal';
+import { extractDocumentClientSide } from './utils/clientExtractor';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -69,10 +70,34 @@ export default function App() {
           content: "COMPANHIA PAULISTA DE FORÇA E LUZ - CPFL\nCNPJ: 02.838.720/0001-28\nUnidade Consumidora: CONDOMINIO EDIFICIO BELLA VISTA - CNPJ: 12.345.678/0001-90\nVencimento: 15/10/2026\nTotal a Pagar: R$ 1.450,80\nLinha Digitável: 83660000001-4 45080048100-3 15102026123-0 00012345678-9"
         },
         {
+          id: "darf_impostos.txt",
+          title: "Darf Impostos",
+          category: "Impostos",
+          content: "SECRETARIA DA RECEITA FEDERAL DO BRASIL\nMINISTÉRIO DA FAZENDA\nDOCUMENTO DE ARRECADAÇÃO DE RECEITAS FEDERAIS - DARF\nContribuinte: CONDOMINIO EDIFICIO VILA NOVA - CNPJ: 11.222.333/0001-44\nCódigo da Receita: 1708 - IRRF Retenção PJ\nPeríodo de Apuração: 31/07/2026 | Data de Vencimento: 20/08/2026\nValor do Principal: R$ 320,50\nMulta: R$ 15,00 | Juros: R$ 4,50\nTotal do Documento: R$ 340,00\nCódigo de Barras: 85890000003-2 40000179260-8 82008202611-3 22233300014-4"
+        },
+        {
+          id: "portaria_servicos.txt",
+          title: "Portaria Servicos",
+          category: "Contratos",
+          content: "GUARDIAN SEGURANÇA PATRIMONIAL E SERVIÇOS LTDA\nCNPJ: 18.999.888/0001-33\nFatura Mensal de Serviços Especializados de Portaria e Vigilância 24h\nTomador: CONDOMINIO RESIDENCIAL GRAN TERRACO - CNPJ: 45.666.777/0001-88\nEmissão: 28/09/2026 | Vencimento: 05/10/2026\nValor dos Serviços: R$ 8.500,00\nDesconto por Adiantamento: R$ 0,00 | Encargos: R$ 0,00\nTotal a Pagar: R$ 8.500,00\nLinha Digitável: 23793.38128 60012.345678 90001.234567 1 98760000850000\nChave PIX: financeiro@guardianseguranca.com.br"
+        },
+        {
+          id: "sabesp_agua.txt",
+          title: "Sabesp Agua",
+          category: "Consumo",
+          content: "COMPANHIA DE SANEAMENTO BASICO DO ESTADO DE SAO PAULO - SABESP\nCNPJ: 43.776.517/0001-80\nLigação / RGI: 02938472-10\nCliente: CONDOMINIO RESIDENCIAL PARQUE DAS FLORES - CNPJ: 22.333.444/0001-55\nPeríodo de Consumo: 01/09/2026 a 30/09/2026 | Emissão: 05/10/2026 | Vencimento: 22/10/2026\nValor da Água: R$ 1.120,50 | Valor do Esgoto: R$ 1.120,50\nValor Original: R$ 2.241,00\nDesconto Tarifário: R$ 0,00 | Acréscimos: R$ 0,00\nTotal a Pagar: R$ 2.241,00\nLinha Digitável: 82680000022-4 41000011205-1 10051020262-8 23334440001-7"
+        },
+        {
           id: "schindler_elevadores.txt",
           title: "Manutenção Elevadores",
           category: "Contratos",
           content: "ELEVADORES ATLAS SCHINDLER S.A.\nCNPJ: 61.065.259/0001-10\nSacado / Condomínio: Condomínio Solaris Premium - CNPJ: 33.444.555/0001-22\nData de Vencimento: 10/11/2026\nValor Líquido a Pagar: R$ 890,00\nLinha Digitável: 34191.79001 01043.510047 91020.150008 4 98150000089000\nPIX Copia e Cola: 00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-426614174000"
+        },
+        {
+          id: "secovi_pe.txt",
+          title: "Secovi Pe",
+          category: "Serviços",
+          content: `Agência/Cód. Beneficiário CNPJ/CPF - Pagador Data Emissão\nNúmero Documento Vencimento\n3211/11950-2 02819556000130 21/05/2026 9907637002 19/06/2026\nBeneficiário CNPJ/CPF - Beneficiário Valor\nSECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES 24.566.663/0001-36\n21 4,00\nAv. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP : 51110-160\nApto :\nPagador EDF. AVIS LIBERTA MENSAL ASSOC. JAN/26 A MAI/26 TX/24 -2/3\nValor a pagar : R$214,00\nCódigo Descrição Complemento Documento Valor\nMENSAL JAN/26 A MAI/26 E TAXA/2024 214,00\nInstruções de Cobrança\nMENSAL JAN/26 A MAI/26 E TAXA/202 214,00 + JUROS AO DIA R$0, 07\n(0,0333%)\nACORDO - MENSAL ASSOC. JAN/26 A MAI /ZG E TAXA ASSIST ZOGA PARC.OZ/OZ\nAPOS VENCIMENTO MULTA DE R$4,Z8 (Z%)\nRECIBO DO PAGADOR Nosso Nº: 109/00IZZSZ-Z-S Formulário Eletrônico\nCARSOFT\nBanco Itau S.A. 34191.09008 00000.000000 00000.000000 0 00000000021400\nAutenticação Mecânica\nConterir os digitos verificadores que estão abaixo anivorme con os digitos a seguir Z-L-0-L\nBanco Itau S.A. 341-7 Vencimento\nLocal do Pagamento Até o vencimento, preferencialmente no Itaú. Após o vencimento, somente no Itaú.\nBeneficiário SECOVI-PE -SIND EMP C VEND L ADM I ED EM COND RES CNPJ: 24.566.663/0001-36 Agência/Código Beneficiário\nAv. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP: 51110-160 Nosso Numero\nData Documento Número do Documento Espécie do Documento Aceite Data do Processamento\n21/05/2026 9907637002 DM N 21/05/2026 109/0012252-2-5\nUso do banco Carteira Espécie moeda Quantidade Valor Valor Documento\n109 R$ 214,00\nInstruções de responsabilidade do beneficiário Qualquer dúvida sobre este boleto, contate o beneficiário.\nMENSAL JAN/26 A MAI/26 E TAXA/2024 214,00 (-) Descontos/Ajustamentos\nACORDO - MENSAL ASSOC. JAN/26 A MAI/26 E TAXA ASSIST 2024 PARC. 02/02 (+) Outras Deduções\nAPOS VENCIMENTO MULTA DE R$ 4,28 (2%) (+) Moras/Multas\n+ JUROS AO DIA R$ 0,07 (0,0333%) (+) Outros Acréscimos\nSECOVI-PE (81) 2122-7600 secovi@secovi-pe.com.br (=) Valor Cobrado\nPagador 00226 EDF. AVIS LIBERTA\nR DOM SEBASTIAO LEME, 211\nGRACAS - RECIFE - PE CEP: 52011-120 CNPJ/CPF: 02.819.556/0001-30\nSacador/Avalista Código de Baixa`
         }
       ]);
     }
@@ -107,8 +132,7 @@ export default function App() {
 
       setFase('validacao');
     } catch (err) {
-      console.error("Falha ao chamar API de extração:", err);
-      // Fallback gracioso para simulação local se offline
+      console.warn("API de extração offline ou indisponível, usando motor de grounding client-side:", err);
       simulateLocalExtraction(text);
     }
   };
@@ -142,8 +166,7 @@ export default function App() {
 
       setFase('validacao');
     } catch (err) {
-      console.error("Erro no processamento do arquivo:", err);
-      // Fallback lendo texto do arquivo
+      console.warn("Fallback client-side para processamento de arquivo:", err);
       const reader = new FileReader();
       reader.onload = (e) => {
         simulateLocalExtraction(e.target.result);
@@ -166,30 +189,10 @@ export default function App() {
 
   const simulateLocalExtraction = (text) => {
     setTimeout(() => {
-      setCurrentDoc({
-        docId: 'doc_local',
-        rawText: text,
-        htmlContent: `<div style="padding:10px; color:#38bdf8;"><strong>Visualização Offline com Grounding</strong></div><pre>${text}</pre>`,
-        groundingSpans: [],
-        dadosExtraidos: {
-          tipo_documento: text.includes("CPFL") ? "Conta de Consumo" : "Boleto de Serviços",
-          condominio_nome: text.includes("BELLA VISTA") ? "CONDOMINIO EDIFICIO BELLA VISTA" : "Condomínio Solaris Premium",
-          condominio_cnpj: "12.345.678/0001-90",
-          tipo_conta: text.includes("CPFL") ? "Consumo > Energia Elétrica" : "Contratos > Elevadores",
-          fornecedor_nome: text.includes("CPFL") ? "COMPANHIA PAULISTA DE FORÇA E LUZ - CPFL" : "ELEVADORES ATLAS SCHINDLER S.A.",
-          fornecedor_cnpj: "02.838.720/0001-28",
-          valor_total: text.includes("1.450,80") ? "1.450,80" : "890,00",
-          valor_original: text.includes("1.450,80") ? "1.450,80" : "940,00",
-          valor_desconto: text.includes("50,00") ? "50,00" : "0,00",
-          valor_acrescimo: "0,00",
-          data_vencimento: "2026-10-15",
-          data_emissao: "2026-10-01",
-          linha_digitavel: "83660000001-4 45080048100-3 15102026123-0 00012345678-9",
-          chave_pix: text.includes("PIX") ? "00020126580014BR.GOV.BCB.PIX0136123e4567-e89b-12d3-a456-426614174000" : ""
-        }
-      });
+      const extracted = extractDocumentClientSide(text);
+      setCurrentDoc(extracted);
       setFase('validacao');
-    }, 1200);
+    }, 600);
   };
 
   const handleFieldChange = (campo, valor) => {
