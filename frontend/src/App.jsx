@@ -64,6 +64,12 @@ export default function App() {
       console.warn("Backend local não disponível ainda, usando amostras estáticas:", err);
       setSamples([
         {
+          id: "neoenergia_pernambuco.txt",
+          title: "Neoenergia Energia",
+          category: "Consumo",
+          content: "Neoenergia\nPernambuco\nneoenergia.com/pernambuco | Ligue grátis 0800 281 22 36 ou 116\nNOME DO CLIENTE:\nEDIFICIO AVIS LIBERTAS\nCNPJ 02819-556/0001-30\nENDERECO:\nRUA DOM SEBASTIAO LEME 171 EDIFICIO AVIS LIBERTAS\nGRAÇAS RECIPE\n52011-160 RECIFE PE\nREF: MES/ANO\nTOTAL A PAGAR\nVENCIMENTO\nMAI/2026\nR$ 9.024,54\n10/07/2026\nCODIGO DA INSTALAÇÃO\n2941129\nNOTA FISCAL Nº415197365-SERIE 000/DATA DE EMISSÃO\n10/06/2026\nConsulte pela Chave de Acesso em:\nhttps://dfe-portal.svrs.rs.gov.br/NFe/consulta/\nChave de Acesso:\n2626 0600 0000 0000 0000 5500 0000 4151 9736 5007"
+        },
+        {
           id: "cpfl_energia.txt",
           title: "Cpfl Energia",
           category: "Consumo",
@@ -193,6 +199,45 @@ export default function App() {
       setCurrentDoc(extracted);
       setFase('validacao');
     }, 600);
+  };
+
+  const [isReExtracting, setIsReExtracting] = useState(false);
+
+  const handleReExtract = async (userHint) => {
+    if (!currentDoc.rawText) return;
+    setIsReExtracting(true);
+    setErrorMsg(null);
+
+    try {
+      const res = await fetch('/api/re-extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: currentDoc.rawText,
+          user_hint: userHint || '',
+          doc_id: currentDoc.docId || 'doc_current'
+        })
+      });
+
+      if (!res.ok) {
+        throw new Error(`Erro na re-extração (${res.status})`);
+      }
+
+      const data = await res.json();
+      setCurrentDoc({
+        docId: data.doc_id || currentDoc.docId,
+        rawText: data.raw_text || currentDoc.rawText,
+        htmlContent: data.html_viewer_url ? await fetchHtmlView(data.html_viewer_url) : '',
+        groundingSpans: data.grounding_spans || [],
+        dadosExtraidos: data.dados_extraidos
+      });
+    } catch (err) {
+      console.warn("API de re-extração offline, executando motor client-side com feedback:", err);
+      const extracted = extractDocumentClientSide(currentDoc.rawText, userHint);
+      setCurrentDoc(extracted);
+    } finally {
+      setIsReExtracting(false);
+    }
   };
 
   const handleFieldChange = (campo, valor) => {
@@ -371,6 +416,8 @@ export default function App() {
                 erpDestino={erpDestino}
                 onFocusField={setFocusedField}
                 groundingSpans={currentDoc.groundingSpans}
+                onReExtract={handleReExtract}
+                isReExtracting={isReExtracting}
               />
             </div>
 

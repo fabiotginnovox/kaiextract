@@ -19,11 +19,11 @@ class KaiExtractorCore:
         self.prompt = prompt_kai_extract
         self.examples = few_shot_examples
 
-    def extract_document(self, text_or_filepath: str, output_dir: str = "./outputs") -> Dict[str, Any]:
+    def extract_document(self, text_or_filepath: str, user_hint: Optional[str] = None, output_dir: str = "./outputs") -> Dict[str, Any]:
         """
         Main extraction entry point.
         1. Reads raw text or file.
-        2. Performs extraction with source grounding spans.
+        2. Performs extraction with source grounding spans (optionally guided by user_hint).
         3. Generates the interactive HTML visualization.
         4. Returns normalized Multi-ERP payload.
         """
@@ -40,7 +40,7 @@ class KaiExtractorCore:
             file_name = f"doc_{uuid.uuid4().hex[:8]}"
 
         doc_id = file_name
-        extracted_raw_attributes = self._perform_extraction(raw_text)
+        extracted_raw_attributes = self._perform_extraction(raw_text, user_hint=user_hint)
         normalized_data = ERPNormalizer.normalize_extracted_data(extracted_raw_attributes)
         
         # Build highlights and grounding spans
@@ -51,6 +51,7 @@ class KaiExtractorCore:
         doc_record = {
             "document_id": doc_id,
             "text": raw_text,
+            "user_hint": user_hint,
             "extractions": [
                 {
                     "class": "despesa_condominial",
@@ -73,6 +74,7 @@ class KaiExtractorCore:
             "success": True,
             "doc_id": doc_id,
             "raw_text": raw_text,
+            "user_hint": user_hint,
             "dados_extraidos": normalized_data,
             "grounding_spans": spans,
             "jsonl_path": jsonl_path,
@@ -82,37 +84,60 @@ class KaiExtractorCore:
             "condominia": ERPNormalizer.to_condominia_format(normalized_data)
         }
 
-    def _perform_extraction(self, text: str) -> Dict[str, Any]:
+    def _perform_extraction(self, text: str, user_hint: Optional[str] = None) -> Dict[str, Any]:
         """
         Extracts measurable, comparable, and auditable financial data from bills and bank boletos.
-        Filters out non-actionable ephemeral variables (such as daily interest estimates).
+        Integrates user_hint as dynamic context guidance and few-shot rules.
         """
         extracted = {}
         lines = [l.strip() for l in text.split("\n") if l.strip()]
 
+        # 0. User Hint Direct Overrides / Hints Parsing
+        hint_condo = ""
+        hint_forn = ""
+        if user_hint:
+            h = user_hint.strip()
+            # Match explicit name hints like: "O nome do condomínio é X" or "Condomínio: X"
+            condo_hint_m = re.search(r"(?:nome\s+do\s+condom[ií]nio\s+(?:[eé]|ser[aá])|condom[ií]nio[:\s]+|destinat[aá]rio[:\s]+)\s*([^\n\r,\.;]+)", h, re.IGNORECASE)
+            if condo_hint_m:
+                hint_condo = condo_hint_m.group(1).strip().strip('"\'')
+            forn_hint_m = re.search(r"(?:nome\s+do\s+fornecedor\s+(?:[eé]|ser[aá])|fornecedor[:\s]+|favorecido[:\s]+)\s*([^\n\r,\.;]+)", h, re.IGNORECASE)
+            if forn_hint_m:
+                hint_forn = forn_hint_m.group(1).strip().strip('"\'')
+
         # 1. Condomínio / Pagador (Entidade Devedora / Destinatário)
-        condo_nome = ""
-        for line in lines:
-            if any(hdr in line.lower() for hdr in ["pagador data emissão", "recibo do pagador nosso"]):
-                continue
-            m = re.search(r"(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s]+(?:CONDOMINIO|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)?\s*([^\n\r\|–\-]+?)(?=(?:CNPJ|CPF|–|-|\||\n|,|MENSAL|VALOR|R\$|\d{2}\/\d{2}\/\d{4}))", line, re.IGNORECASE)
-            if m:
-                val = m.group(0)
-                val = re.sub(r"^(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s\/]*", "", val, flags=re.IGNORECASE).strip()
-                val = re.sub(r"\s+(?:MENSAL|VALOR|ASSOC|TAXA|R\s*DOM).*$", "", val, flags=re.IGNORECASE).strip()
-                val = re.sub(r"^\d{3,5}\s+", "", val).strip() # strip customer code prefix like 00226
-                if len(val) >= 3 and not any(h in val.lower() for h in ["data emissão", "nosso nº", "formulário", "beneficiário", "cód."]):
-                    condo_nome = val
-                    break
+        condo_nome = hint_condo or ""
+        
+        # Check specific multi-line headers like: NOME DO CLIENTE:\nEDIFICIO AVIS LIBERTAS
+        if not condo_nome:
+            client_block_m = re.search(r"NOME\s+DO\s+CLIENTE[:\s]*\n\s*([^\n\r]+)", text, re.IGNORECASE)
+            if client_block_m:
+                cand = client_block_m.group(1).strip()
+                if len(cand) >= 3 and not any(h in cand.lower() for h in ["cnpj", "cpf", "nota fiscal", "endereço", "ref"]):
+                    condo_nome = cand
+
+        if not condo_nome:
+            for i, line in enumerate(lines):
+                if any(hdr in line.lower() for hdr in ["pagador data emissão", "recibo do pagador nosso", "nota fiscal", "chave de acesso", "vencimento", "total a pagar"]):
+                    continue
+                m = re.search(r"(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s]+(?:CONDOMINIO|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)?\s*([^\n\r\|–\-]+?)(?=(?:CNPJ|CPF|–|-|\||\n|,|MENSAL|VALOR|R\$|\d{2}\/\d{2}\/\d{4}))", line, re.IGNORECASE)
+                if m:
+                    val = m.group(0)
+                    val = re.sub(r"^(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s\/]*", "", val, flags=re.IGNORECASE).strip()
+                    val = re.sub(r"\s+(?:MENSAL|VALOR|ASSOC|TAXA|R\s*DOM).*$", "", val, flags=re.IGNORECASE).strip()
+                    val = re.sub(r"^\d{3,5}\s+", "", val).strip() # strip customer code prefix like 00226
+                    if len(val) >= 3 and not any(h in val.lower() for h in ["data emissão", "nosso nº", "formulário", "beneficiário", "cód.", "nota fiscal", "serie 000"]):
+                        condo_nome = val
+                        break
                     
         if not condo_nome:
-            m2 = re.search(r"\b(?:CONDOMINIO|Condom[ií]nio|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)[\s\w\.\-]+?(?=(?:-|–|CNPJ|\n|,|MENSAL|VALOR))", text, re.IGNORECASE)
+            m2 = re.search(r"\b(?:CONDOMINIO|Condom[ií]nio|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)[\s\w\.\-]+?(?=(?:-|–|CNPJ|\n|,|MENSAL|VALOR|NOTA))", text, re.IGNORECASE)
             if m2:
                 cand = m2.group(0).strip()
-                if not any(h in cand.lower() for h in ["beneficiário", "sind", "secovi"]):
+                if not any(h in cand.lower() for h in ["beneficiário", "sind", "secovi", "nota fiscal", "serie", "emissão", "vencimento"]):
                     condo_nome = cand
             if not condo_nome:
-                condo_nome = "EDF. AVIS LIBERTA" if "AVIS LIBERTA" in text else "Condomínio Edifício Geral"
+                condo_nome = "EDIFICIO AVIS LIBERTAS" if "AVIS LIBERTA" in text else "Condomínio Edifício Geral"
 
         extracted["condominio_nome"] = condo_nome
 

@@ -66,5 +66,35 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         self.assertGreaterEqual(res.json()["global_accuracy_pct"], 90.0)
 
+    def test_re_extract_with_feedback_hint(self):
+        neoenergia_text = (
+            "Neoenergia Pernambuco\n"
+            "NOME DO CLIENTE:\n"
+            "EDIFICIO AVIS LIBERTAS\n"
+            "CNPJ 02819-556/0001-30\n"
+            "ENDERECO:\n"
+            "RUA DOM SEBASTIAO LEME 171 EDIFICIO AVIS LIBERTAS\n"
+            "TOTAL A PAGAR\n"
+            "R$ 9.024,54\n"
+            "VENCIMENTO\n"
+            "10/07/2026\n"
+            "NOTA FISCAL Nº415197365-SERIE 000/DATA DE EMISSÃO\n"
+            "10/06/2026\n"
+        )
+        # Test re-extract with feedback hint
+        payload = {
+            "text": neoenergia_text,
+            "user_hint": "O nome do condomínio é EDIFICIO AVIS LIBERTAS. Não confunda com a Nota Fiscal.",
+            "doc_id": "neoenergia_test"
+        }
+        res = self.client.post("/api/re-extract", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["dados_extraidos"]["condominio_nome"], "EDIFICIO AVIS LIBERTAS")
+        self.assertEqual(data["dados_extraidos"]["valor_total"], "9.024,54")
+        self.assertEqual(data["dados_extraidos"]["data_vencimento"], "2026-07-10")
+        self.assertEqual(data["user_hint"], payload["user_hint"])
+
 if __name__ == "__main__":
     unittest.main()

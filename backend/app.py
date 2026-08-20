@@ -41,6 +41,11 @@ class ExtractRequest(BaseModel):
     text: str
     doc_name: Optional[str] = "documento"
 
+class ReExtractRequest(BaseModel):
+    text: str
+    user_hint: Optional[str] = None
+    doc_id: Optional[str] = None
+
 class ExportRequest(BaseModel):
     erp: str  # "superlogica" | "condominia" | "universal"
     data: Dict[str, Any]
@@ -118,6 +123,35 @@ async def extract_document_endpoint(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro durante a extração: {str(e)}")
+
+@app.post("/api/re-extract")
+async def re_extract_document_endpoint(request: ReExtractRequest):
+    """
+    Re-extracts structured data and regenerates source grounding spans 
+    guided by dynamic user feedback / context hint (Feedback Loop).
+    """
+    if not request.text or not request.text.strip():
+        raise HTTPException(status_code=400, detail="O texto do documento está vazio.")
+
+    try:
+        result = extractor_engine.extract_document(
+            text_or_filepath=request.text,
+            user_hint=request.user_hint,
+            output_dir=OUTPUTS_DIR
+        )
+        return {
+            "status": "success",
+            "doc_id": result["doc_id"],
+            "user_hint": request.user_hint,
+            "raw_text": result["raw_text"],
+            "dados_extraidos": result["dados_extraidos"],
+            "grounding_spans": result["grounding_spans"],
+            "html_viewer_url": f"/api/visualize/{result['doc_id']}",
+            "superlogica": result["superlogica"],
+            "condominia": result["condominia"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro durante a re-extração: {str(e)}")
 
 @app.get("/api/visualize/{doc_id}", response_class=HTMLResponse)
 def get_visualization_html(doc_id: str):

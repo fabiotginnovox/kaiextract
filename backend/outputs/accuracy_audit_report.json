@@ -1,6 +1,6 @@
 {
-  "total_documents": 6,
-  "global_accuracy_pct": 100.0,
+  "total_documents": 7,
+  "global_accuracy_pct": 97.62,
   "results": [
     {
       "file": "cpfl_energia.txt",
@@ -65,6 +65,38 @@
         "metodo_pagamento": "Boleto"
       },
       "html_view": "/Users/fabiogarcia/_Innovox/KaiExtract/backend/outputs/darf_impostos_visualization.html"
+    },
+    {
+      "file": "neoenergia_pernambuco.txt",
+      "score": 83.33333333333334,
+      "data": {
+        "condominio_nome": "EDIFICIO AVIS LIBERTAS",
+        "condominio_cnpj": "",
+        "condominio_endereco": "RUA DOM SEBASTIAO LEME 171 EDIFICIO AVIS LIBERTAS",
+        "tipo_conta": "Consumo > Energia Elétrica",
+        "fornecedor_nome": "Neoenergia",
+        "fornecedor_cnpj": "",
+        "fornecedor_endereco": "",
+        "fornecedor_contato": "",
+        "valor_total": "9.024,54",
+        "valor_total_float": 9024.54,
+        "valor_original": "9.024,54",
+        "valor_desconto": "0,00",
+        "valor_acrescimo": "0,00",
+        "multa_atraso": "",
+        "juros_dia": "",
+        "data_vencimento": "2026-06-10",
+        "data_emissao": "2026-06-10",
+        "banco_info": "Banco do Brasil",
+        "numero_documento": "",
+        "nosso_numero": "",
+        "descricao_servico": "Serviços Condominiais",
+        "local_pagamento": "Rede Bancária / Internet Banking",
+        "linha_digitavel": "",
+        "chave_pix": "",
+        "metodo_pagamento": "Transferência/Outro"
+      },
+      "html_view": "/Users/fabiogarcia/_Innovox/KaiExtract/backend/outputs/neoenergia_pernambuco_visualization.html"
     },
     {
       "file": "portaria_servicos.txt",

@@ -13,7 +13,12 @@ import {
   RotateCcw,
   MapPin,
   Percent,
-  FileText
+  FileText,
+  Sparkles,
+  RefreshCw,
+  X,
+  MessageSquare,
+  Loader2
 } from 'lucide-react';
 
 const CATEGORIAS_PADRAO = [
@@ -248,11 +253,15 @@ export default function ExtractionForm({
   onReset, 
   erpDestino,
   onFocusField,
-  groundingSpans = []
+  groundingSpans = [],
+  onReExtract = null,
+  isReExtracting = false
 }) {
   const [copiedField, setCopiedField] = useState(null);
   const [showAdvancedAmounts, setShowAdvancedAmounts] = useState(false);
   const [showAdditionalDetails, setShowAdditionalDetails] = useState(false);
+  const [isReExtractModalOpen, setIsReExtractModalOpen] = useState(false);
+  const [userHintText, setUserHintText] = useState('');
 
   const handleCopy = (field, value) => {
     if (!value) return;
@@ -301,10 +310,28 @@ export default function ExtractionForm({
 
   return (
     <GroundingColorContext.Provider value={spanColorMap}>
-      <div className="bg-[#2E2621] rounded-2xl p-5 flex flex-col justify-between h-full border border-[#453A31] overflow-y-auto max-h-[85vh]">
+      <div className="bg-[#2E2621] rounded-2xl p-5 flex flex-col justify-between h-full border border-[#453A31] overflow-y-auto max-h-[85vh] relative">
       
+      {/* Organic Scanning / Re-extracting Loader Overlay */}
+      {isReExtracting && (
+        <div className="absolute inset-0 z-40 bg-[#2E2621]/90 backdrop-blur-sm rounded-2xl flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+          <div className="relative mb-4">
+            <div className="w-16 h-16 rounded-full border-4 border-[#D5A474]/20 border-t-[#D5A474] animate-spin"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-[#D5A474] animate-pulse" />
+            </div>
+          </div>
+          <h4 className="font-serif text-base font-medium text-[#FFFEFD] mb-1">
+            Re-rastreando documento com IA...
+          </h4>
+          <p className="text-xs text-[#BCB4AD] max-w-xs font-mono">
+            Aplicando sua dica de contexto e recalculando ancoragens no LangExtract / Gemini.
+          </p>
+        </div>
+      )}
+
       <div>
-        {/* Header with Title & ERP Badge */}
+        {/* Header with Title & Action Buttons */}
         <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-[#453A31]">
           <div>
             <div className="font-mono text-[10px] uppercase tracking-widest text-[#BCB4AD] flex items-center gap-2">
@@ -320,9 +347,24 @@ export default function ExtractionForm({
             </h3>
           </div>
 
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2E2621] border border-[#453A31] text-xs">
-            <span className="font-mono text-[10px] uppercase text-[#97918D]">Destino:</span>
-            <span className="font-medium text-[#D5A474]">{getErpLabel()}</span>
+          <div className="flex items-center gap-2">
+            {onReExtract && (
+              <button
+                type="button"
+                onClick={() => setIsReExtractModalOpen(true)}
+                disabled={isReExtracting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#58493D]/60 hover:bg-[#58493D] border border-[#D5A474]/40 hover:border-[#D5A474] text-[#FFFEFD] hover:text-[#D5A474] font-medium text-xs transition-all shadow-sm group disabled:opacity-50"
+                title="Forneça uma dica ou instrução para re-extrair o documento com o LangExtract"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#D5A474] group-hover:rotate-12 transition-transform" />
+                <span>Rastrear novamente</span>
+              </button>
+            )}
+
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#2E2621] border border-[#453A31] text-xs">
+              <span className="font-mono text-[10px] uppercase text-[#97918D]">Destino:</span>
+              <span className="font-medium text-[#D5A474]">{getErpLabel()}</span>
+            </div>
           </div>
         </div>
 
@@ -652,6 +694,93 @@ export default function ExtractionForm({
           <span>Sincronizar com {erpDestino === 'superlogica' ? 'SuperLógica' : (erpDestino === 'condominia' ? 'CondominIA' : 'ERP Universal')}</span>
         </button>
       </div>
+
+      {/* Re-extract Feedback Modal */}
+      {isReExtractModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#2E2621] border border-[#58493D] rounded-2xl p-6 max-w-lg w-full shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setIsReExtractModalOpen(false)}
+              className="absolute top-4 right-4 text-[#97918D] hover:text-[#FFFEFD] p-1 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2.5 rounded-xl bg-[#58493D]/60 border border-[#D5A474]/40 text-[#D5A474]">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-base font-semibold text-[#FFFEFD]">
+                  Rastrear novamente com IA
+                </h3>
+                <p className="text-[11px] text-[#BCB4AD] font-mono">
+                  Feedback Loop • Calibração determinística no LangExtract / Gemini
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#BCB4AD] my-3 leading-relaxed">
+              Escreva uma dica ou instrução em linguagem natural para orientar o modelo a refinar a extração e as coordenadas de Grounding deste documento:
+            </p>
+
+            <textarea
+              value={userHintText}
+              onChange={(e) => setUserHintText(e.target.value)}
+              placeholder="Ex: O nome do condomínio é EDIFICIO AVIS LIBERTAS. Não confunda o condomínio com o número da Nota Fiscal."
+              rows={3}
+              className="w-full bg-[#1F1915] border border-[#453A31] focus:border-[#D5A474] rounded-xl p-3 text-xs text-[#FFFEFD] font-mono outline-none resize-none placeholder-[#97918D]/50 transition-colors"
+            />
+
+            {/* Quick suggestion chips */}
+            <div className="mt-3">
+              <span className="text-[10px] font-mono uppercase text-[#97918D] block mb-1.5">
+                Dicas Prontas (clique para preencher):
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  "O nome do condomínio é EDIFICIO AVIS LIBERTAS",
+                  "Não confunda o condomínio com a Nota Fiscal",
+                  "O fornecedor correto é Neoenergia",
+                  "O CNPJ do pagador é 02.819.556/0001-30"
+                ].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => setUserHintText(chip)}
+                    className="text-[10px] px-2.5 py-1 rounded-md bg-[#3A302A] hover:bg-[#58493D] text-[#BCB4AD] hover:text-[#FFFEFD] border border-[#453A31] transition-colors"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-[#453A31]">
+              <button
+                type="button"
+                onClick={() => setIsReExtractModalOpen(false)}
+                className="px-4 py-2 rounded-lg text-xs text-[#97918D] hover:text-[#FFFEFD] border border-[#453A31] transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsReExtractModalOpen(false);
+                  if (onReExtract) onReExtract(userHintText);
+                }}
+                disabled={isReExtracting}
+                className="kai-btn-primary px-5 py-2 rounded-lg text-xs font-semibold flex items-center gap-2"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Confirmar e Re-rastrear</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   </GroundingColorContext.Provider>
