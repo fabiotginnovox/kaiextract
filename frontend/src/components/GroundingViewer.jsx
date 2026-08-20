@@ -473,21 +473,28 @@ export default function GroundingViewer({
     }
 
     const text = selection.toString().trim();
-    if (text.length >= 1) {
+    if (text.length >= 1 && containerRef.current) {
       try {
         const range = selection.getRangeAt(0);
         const rect = range.getBoundingClientRect();
-        const containerRect = containerRef.current?.getBoundingClientRect();
+        const container = containerRef.current;
+        const containerRect = container.getBoundingClientRect();
 
-        if (containerRect) {
-          const top = rect.bottom - containerRect.top + 10;
-          const left = Math.max(10, Math.min(rect.left - containerRect.left, containerRect.width - 320));
+        // Calculate exact content position considering container.scrollTop and container.scrollLeft
+        const relativeTop = rect.bottom - containerRect.top + container.scrollTop + 8;
+        const relativeLeft = Math.max(10, Math.min(rect.left - containerRect.left + container.scrollLeft, containerRect.width - 340));
 
-          setSelectedText(text);
-          setPopoverPos({ top, left });
-          setSelectedColor(null);
-          setSearchFilter('');
+        // If selection is near the bottom of the container viewport, position the popover above the line
+        const spaceBelow = containerRect.bottom - rect.bottom;
+        let finalTop = relativeTop;
+        if (spaceBelow < 280 && (rect.top - containerRect.top) > 260) {
+          finalTop = rect.top - containerRect.top + container.scrollTop - 290;
         }
+
+        setSelectedText(text);
+        setPopoverPos({ top: Math.max(10, finalTop), left: relativeLeft });
+        setSelectedColor(null);
+        setSearchFilter('');
       } catch (e) {
         console.warn('Error reading selection range:', e);
       }
@@ -502,6 +509,24 @@ export default function GroundingViewer({
       window.getSelection().removeAllRanges();
     }
   };
+
+  useEffect(() => {
+    const handleDocumentMouseDown = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+          closePopover();
+        }
+      }
+    };
+
+    if (popoverPos) {
+      document.addEventListener('mousedown', handleDocumentMouseDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentMouseDown);
+    };
+  }, [popoverPos]);
 
   const handleAssignField = (fieldObj) => {
     if (!selectedText || !onManualGrounding) return;
