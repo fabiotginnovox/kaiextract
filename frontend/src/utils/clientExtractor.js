@@ -197,3 +197,58 @@ export function extractDocumentClientSide(text) {
     dadosExtraidos: doc
   };
 }
+
+/**
+ * Smart normalizer for user text selections on the left column.
+ * Cleans OCR artifacts and formats dates, currency, CNPJs, and barcodes
+ * before placing them into the right-hand column input fields.
+ */
+export function normalizeSelectedValue(field, rawText) {
+  if (!rawText) return '';
+  let val = String(rawText).trim();
+
+  // Strip leading label headers if the user selected "CNPJ: 24.566..." or "Vencimento: 19/06/2026"
+  val = val.replace(/^(?:CNPJ\/CPF|CNPJ|CPF|Data\s+Emiss[ãa]o|Vencimento|Data\s+do\s+Documento|Data|Valor\s+a\s+pagar|Valor\s+Total|Valor\s+Original|Valor|R\$|Total|Nosso\s*N[ºo]|N[ºo]\s*Doc|Instruções|Beneficiário|Pagador|Cliente|Tomador)[:\s-]*/i, '').trim();
+
+  if (['fornecedor_cnpj', 'condominio_cnpj', 'cnpj_fornecedor', 'cnpj_condominio'].includes(field)) {
+    // Correct OCR noise (e.g. Z->2, O->0, S->5, L->1, B->8)
+    val = val.replace(/[zZ]/g, '2')
+             .replace(/[oOD]/g, '0')
+             .replace(/[sS]/g, '5')
+             .replace(/[lLiI|]/g, '1')
+             .replace(/[bB]/g, '8');
+    const digits = val.replace(/\D/g, '');
+    if (digits.length === 14) {
+      val = `${digits.slice(0,2)}.${digits.slice(2,5)}.${digits.slice(5,8)}/${digits.slice(8,12)}-${digits.slice(12,14)}`;
+    } else if (digits.length === 11) {
+      val = `${digits.slice(0,3)}.${digits.slice(3,6)}.${digits.slice(6,9)}-${digits.slice(9,11)}`;
+    }
+  } else if (['linha_digitavel', 'linha'].includes(field)) {
+    val = val.replace(/[zZ]/g, '2')
+             .replace(/[oOD]/g, '0')
+             .replace(/[sS]/g, '5')
+             .replace(/[lLiI|]/g, '1')
+             .replace(/[bB]/g, '8');
+  } else if (['data_vencimento', 'data_emissao', 'vencimento', 'emissao'].includes(field)) {
+    val = val.replace(/[zZ]/g, '2')
+             .replace(/[oOD]/g, '0')
+             .replace(/[sS]/g, '5')
+             .replace(/[lLiI|]/g, '1');
+    const dateMatch = val.match(/\b(\d{2})[\/\.-](\d{2})[\/\.-](\d{4})\b/);
+    if (dateMatch) {
+      val = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+    }
+  } else if (['valor_total', 'valor_original', 'valor'].includes(field)) {
+    val = val.replace(/[zZ]/g, '2')
+             .replace(/[oOD]/g, '0')
+             .replace(/[sS]/g, '5')
+             .replace(/[lLiI|]/g, '1');
+    const numMatch = val.match(/\d+(?:[.,]\d{2})?/);
+    if (numMatch) {
+      val = numMatch[0];
+    }
+  }
+
+  return val;
+}
+

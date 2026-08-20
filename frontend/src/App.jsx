@@ -5,7 +5,7 @@ import GroundingViewer, { buildGroundingHtml } from './components/GroundingViewe
 import ExtractionForm from './components/ExtractionForm';
 import SuccessModal from './components/SuccessModal';
 import AuditModal from './components/AuditModal';
-import { extractDocumentClientSide } from './utils/clientExtractor';
+import { extractDocumentClientSide, normalizeSelectedValue } from './utils/clientExtractor';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -207,25 +207,31 @@ export default function App() {
 
   const handleManualGrounding = ({ field, value, color, label }) => {
     setCurrentDoc(prev => {
+      const normalizedValue = normalizeSelectedValue(field, value);
+
       const updatedDados = {
         ...prev.dadosExtraidos,
-        [field]: value
+        [field]: normalizedValue
       };
 
       // Bidirectional alias sync
-      if (field === 'endereco_fornecedor') updatedDados.fornecedor_endereco = value;
-      if (field === 'fornecedor_endereco') updatedDados.endereco_fornecedor = value;
-      if (field === 'endereco_pagador') updatedDados.condominio_endereco = value;
-      if (field === 'condominio_endereco') updatedDados.endereco_pagador = value;
-      if (field === 'contato_fornecedor') updatedDados.fornecedor_contato = value;
-      if (field === 'fornecedor_contato') updatedDados.contato_fornecedor = value;
+      if (field === 'endereco_fornecedor') updatedDados.fornecedor_endereco = normalizedValue;
+      if (field === 'fornecedor_endereco') updatedDados.endereco_fornecedor = normalizedValue;
+      if (field === 'endereco_pagador') updatedDados.condominio_endereco = normalizedValue;
+      if (field === 'condominio_endereco') updatedDados.endereco_pagador = normalizedValue;
+      if (field === 'contato_fornecedor') updatedDados.fornecedor_contato = normalizedValue;
+      if (field === 'fornecedor_contato') updatedDados.contato_fornecedor = normalizedValue;
+      if (field === 'cnpj_fornecedor') updatedDados.fornecedor_cnpj = normalizedValue;
+      if (field === 'cnpj_condominio') updatedDados.condominio_cnpj = normalizedValue;
 
-      const existingSpans = (prev.groundingSpans || []).filter(s => s.field !== field);
+      const existingSpans = (prev.groundingSpans || []).filter(s => s.field !== field && s.field !== `grounding-${field}`);
       const newSpan = {
         field,
         label: label || field,
         color: color || '#34D399',
-        matched_text: value
+        matched_text: value,
+        value: normalizedValue,
+        manual: true
       };
       const updatedSpans = [...existingSpans, newSpan];
       const updatedHtml = buildGroundingHtml(prev.rawText, updatedSpans);

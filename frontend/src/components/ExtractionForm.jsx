@@ -71,6 +71,16 @@ export const GROUNDING_CONFIG = {
     bg: 'rgba(56, 189, 248, 0.15)',
     glow: 'rgba(56, 189, 248, 0.25)',
   },
+  nosso_numero: {
+    color: '#38BDF8', // Sky
+    bg: 'rgba(56, 189, 248, 0.15)',
+    glow: 'rgba(56, 189, 248, 0.25)',
+  },
+  condominio_cnpj: {
+    color: '#0EA5E9', // Cyan
+    bg: 'rgba(14, 165, 233, 0.15)',
+    glow: 'rgba(14, 165, 233, 0.25)',
+  },
   juros: {
     color: '#FB923C', // Orange
     bg: 'rgba(251, 146, 60, 0.15)',
@@ -326,7 +336,9 @@ export default function ExtractionForm({
               value={dados.condominio_nome || ''}
               onChange={(val) => onChange('condominio_nome', val)}
               placeholder="Nome do Condomínio"
-              config={GROUNDING_CONFIG.condominio} onFocusField={onFocusField} fieldName="condominio_nome"
+              config={GROUNDING_CONFIG.condominio} 
+              onFocusField={onFocusField} 
+              fieldName="condominio_nome"
             />
 
             <div>
@@ -348,6 +360,20 @@ export default function ExtractionForm({
               </div>
             </div>
           </div>
+
+          {(dados.condominio_cnpj || showAdditionalDetails) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <MarkedField
+                label="CNPJ do Condomínio (Pagador)"
+                value={dados.condominio_cnpj || ''}
+                onChange={(val) => onChange('condominio_cnpj', val)}
+                placeholder="00.000.000/0000-00"
+                config={dados.condominio_cnpj ? GROUNDING_CONFIG.condominio_cnpj : null}
+                onFocusField={onFocusField}
+                fieldName="condominio_cnpj"
+              />
+            </div>
+          )}
 
           {/* Row 2: Fornecedor & CNPJ */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -445,8 +471,8 @@ export default function ExtractionForm({
             />
           </div>
 
-          {/* Row 3.5: Emissão e Número do Documento */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {/* Row 3.5: Emissão, Número do Documento e Nosso Número */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <MarkedField
               label="Data de Emissão"
               value={dados.data_emissao || ''}
@@ -466,6 +492,16 @@ export default function ExtractionForm({
               config={dados.numero_documento ? GROUNDING_CONFIG.num_doc : null}
               onFocusField={onFocusField}
               fieldName="numero_documento"
+            />
+
+            <MarkedField
+              label="Nosso Número"
+              value={dados.nosso_numero || ''}
+              onChange={(val) => onChange('nosso_numero', val)}
+              placeholder="Ex: 109/0012252-2-5"
+              config={dados.nosso_numero ? GROUNDING_CONFIG.nosso_numero : null}
+              onFocusField={onFocusField}
+              fieldName="nosso_numero"
             />
           </div>
 
