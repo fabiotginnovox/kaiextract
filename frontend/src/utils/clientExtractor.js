@@ -145,6 +145,19 @@ export function extractDocumentClientSide(text, userHint = null) {
     if (linhaMatch) doc.linha_digitavel = linhaMatch[0];
   }
 
+  // Universal Document Identifiers (Protocolo, NF-e, Chave de Acesso, Código de Instalação)
+  const protMatch = t.match(/Protocolo\s*(?:de\s*Autoriza[çc][ãa]o)?[:\s]*([0-9A-Za-z]+)/i);
+  if (protMatch) doc.protocolo_autorizacao = protMatch[1].trim();
+
+  const chaveMatch = t.match(/Chave\s+de\s+Acesso[:\s]*\n?([0-9\s]{40,60})/i);
+  if (chaveMatch) doc.chave_acesso = chaveMatch[1].replace(/\s+/g, '').trim();
+
+  const instMatch = t.match(/C[óo]digo\s+da\s+Instala[çc][ãa]o[:\s]*([0-9]+)/i);
+  if (instMatch) doc.codigo_instalacao = instMatch[1].trim();
+
+  const nfMatch = t.match(/Nota\s+Fiscal\s+N[º°\s]*([0-9]+)/i);
+  if (nfMatch && !doc.numero_documento) doc.numero_documento = nfMatch[1].trim();
+
   // 1.5 Apply User Feedback Hint (Feedback Loop)
   if (userHint) {
     const h = userHint.trim();
@@ -159,6 +172,11 @@ export function extractDocumentClientSide(text, userHint = null) {
     if (/não\s+confunda|evite.*nota\s+fiscal|nota\s+fiscal/i.test(h) && (doc.condominio_nome.includes('NOTA FISCAL') || doc.condominio_nome.includes('ENTO'))) {
       if (t.includes('AVIS LIBERTAS')) {
         doc.condominio_nome = 'EDIFICIO AVIS LIBERTAS';
+      }
+    }
+    if (/protocolo|autoriza/i.test(h)) {
+      if (doc.protocolo_autorizacao) {
+        doc.numero_documento = doc.protocolo_autorizacao;
       }
     }
   }
@@ -178,7 +196,10 @@ export function extractDocumentClientSide(text, userHint = null) {
     { field: 'linha_digitavel', value: doc.linha_digitavel, color: '#34D399', label: 'Linha Digitável' },
     { field: 'multa_atraso', value: doc.multa_atraso, color: '#F87171', label: 'Multa Prevista' },
     { field: 'juros_dia', value: doc.juros_dia, color: '#FB923C', label: 'Juros/Dia' },
-    { field: 'numero_documento', value: doc.numero_documento, color: '#60A5FA', label: 'Nº Doc' },
+    { field: 'protocolo_autorizacao', value: doc.protocolo_autorizacao, color: '#60A5FA', label: 'Protocolo' },
+    { field: 'numero_documento', value: doc.numero_documento, color: '#60A5FA', label: 'Nº Doc / NF-e' },
+    { field: 'chave_acesso', value: doc.chave_acesso, color: '#38BDF8', label: 'Chave de Acesso' },
+    { field: 'codigo_instalacao', value: doc.codigo_instalacao, color: '#A78BFA', label: 'Cód. Instalação' },
     { field: 'nosso_numero', value: doc.nosso_numero, color: '#38BDF8', label: 'Nosso Nº' },
     { field: 'chave_pix', value: doc.chave_pix, color: '#2DD4BF', label: 'Chave PIX' }
   ];

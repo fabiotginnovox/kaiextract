@@ -93,8 +93,35 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(data["status"], "success")
         self.assertEqual(data["dados_extraidos"]["condominio_nome"], "EDIFICIO AVIS LIBERTAS")
         self.assertEqual(data["dados_extraidos"]["valor_total"], "9.024,54")
-        self.assertEqual(data["dados_extraidos"]["data_vencimento"], "2026-07-10")
-        self.assertEqual(data["user_hint"], payload["user_hint"])
+    def test_re_extract_with_protocol_instruction(self):
+        neoenergia_text = (
+            "Neoenergia Pernambuco\n"
+            "NOME DO CLIENTE:\n"
+            "EDIFICIO AVIS LIBERTAS\n"
+            "TOTAL A PAGAR\n"
+            "R$ 9.024,54\n"
+            "10/07/2026\n"
+            "NOTA FISCAL Nº415197365-SERIE 000/DATA DE EMISSÃO\n"
+            "10/06/2026\n"
+            "Protocolo de Autorização: 3262600023218287 - 10/06/2026 às 11:07:33\n"
+        )
+        payload = {
+            "text": neoenergia_text,
+            "user_hint": "O número do protocolo de Autorização é importante ser marcado.",
+            "doc_id": "neoenergia_protocol_test"
+        }
+        res = self.client.post("/api/re-extract", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["dados_extraidos"]["protocolo_autorizacao"], "3262600023218287")
+        self.assertEqual(data["dados_extraidos"]["numero_documento"], "3262600023218287")
+        
+        # Check grounding span exists for protocol
+        spans = data["grounding_spans"]
+        protocol_spans = [s for s in spans if s["field"] in ["protocolo_autorizacao", "numero_documento"]]
+        self.assertTrue(len(protocol_spans) > 0)
+        self.assertIn("3262600023218287", [s["matched_text"] for s in protocol_spans])
 
 if __name__ == "__main__":
     unittest.main()

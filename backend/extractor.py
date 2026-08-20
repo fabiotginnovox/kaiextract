@@ -339,16 +339,33 @@ class KaiExtractorCore:
         ag_str = agencia_m.group(1).strip() if agencia_m else ""
         extracted["banco_info"] = f"{banco_str} • Ag/Cód: {ag_str}" if ag_str else banco_str
 
-        # Número do Documento
-        num_doc_m = re.search(r"(?:Número Documento|Nº Documento|Num\. Doc\.)[:\s]*(\w+)", text, re.IGNORECASE)
+        # Número do Documento / Nota Fiscal
+        num_doc_m = re.search(r"(?:Número Documento|Nº Documento|Num\. Doc\.|Nota Fiscal Nº|NOTA FISCAL Nº|NF-e Nº)[:\s]*([\w\.\-]+)", text, re.IGNORECASE)
         if num_doc_m and not any(h in num_doc_m.group(1).lower() for h in ["vencimento", "data", "espécie"]):
-            extracted["numero_documento"] = num_doc_m.group(1).strip()
+            clean_num = num_doc_m.group(1).split("-")[0].split("/")[0].strip()
+            extracted["numero_documento"] = clean_num
         else:
             tab_doc_m = re.search(r"\d{2}/\d{2}/\d{4}\s+(\d{8,12})\s+\d{2}/\d{2}/\d{4}", text)
             if tab_doc_m:
                 extracted["numero_documento"] = tab_doc_m.group(1)
             else:
                 extracted["numero_documento"] = ""
+
+        # Protocolo de Autorização
+        prot_m = re.search(r"Protocolo\s*(?:de\s*Autoriza[çc][ãa]o)?[:\s]*([0-9A-Za-z]+)", text, re.IGNORECASE)
+        extracted["protocolo_autorizacao"] = prot_m.group(1).strip() if prot_m else ""
+
+        # If user explicitly requested protocol in user_hint or if numero_documento is empty
+        if user_hint and ("protocolo" in user_hint.lower() or "autoriza" in user_hint.lower()) and extracted["protocolo_autorizacao"]:
+            extracted["numero_documento"] = extracted["protocolo_autorizacao"]
+
+        # Chave de Acesso
+        chave_m = re.search(r"Chave\s+de\s+Acesso[:\s]*\n?([0-9\s]{40,60})", text, re.IGNORECASE)
+        extracted["chave_acesso"] = chave_m.group(1).replace(" ", "").strip() if chave_m else ""
+
+        # Código da Instalação
+        inst_m = re.search(r"C[óo]digo\s+da\s+Instala[çc][ãa]o[:\s]*([0-9]+)", text, re.IGNORECASE)
+        extracted["codigo_instalacao"] = inst_m.group(1).strip() if inst_m else ""
 
         # Nosso Número
         nosso_num_m = re.search(r"(?:Nosso Nº|Nosso Número)[:\s]*([\d\w\/\-\.]+)", text, re.IGNORECASE)
@@ -401,8 +418,11 @@ class KaiExtractorCore:
             ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
             ("multa_atraso", data.get("multa_atraso"), "#f87171", "Multa Prevista"),
             ("juros_dia", data.get("juros_dia"), "#fb923c", "Juros/Dia"),
-            ("numero_documento", data.get("numero_documento"), "#60a5fa", "Nº Doc"),
-            ("nosso_numero", data.get("nosso_numero"), "#60a5fa", "Nosso Nº"),
+            ("protocolo_autorizacao", data.get("protocolo_autorizacao"), "#60a5fa", "Protocolo"),
+            ("numero_documento", data.get("numero_documento"), "#60a5fa", "Nº Doc / NF-e"),
+            ("nosso_numero", data.get("nosso_numero"), "#38bdf8", "Nosso Nº"),
+            ("codigo_instalacao", data.get("codigo_instalacao"), "#a78bfa", "Cód. Instalação"),
+            ("chave_acesso", data.get("chave_acesso"), "#38bdf8", "Chave de Acesso"),
             ("chave_pix", data.get("chave_pix"), "#2dd4bf", "Chave PIX")
         ]
 

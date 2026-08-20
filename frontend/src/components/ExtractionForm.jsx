@@ -72,9 +72,24 @@ export const GROUNDING_CONFIG = {
     glow: 'rgba(129, 140, 248, 0.25)',
   },
   num_doc: {
-    color: '#38BDF8', // Sky
+    color: '#60A5FA', // Sky / Blue
+    bg: 'rgba(96, 165, 250, 0.15)',
+    glow: 'rgba(96, 165, 250, 0.25)',
+  },
+  protocolo_autorizacao: {
+    color: '#60A5FA', // Sky / Blue
+    bg: 'rgba(96, 165, 250, 0.15)',
+    glow: 'rgba(96, 165, 250, 0.25)',
+  },
+  chave_acesso: {
+    color: '#38BDF8', // Cyan / Sky
     bg: 'rgba(56, 189, 248, 0.15)',
     glow: 'rgba(56, 189, 248, 0.25)',
+  },
+  codigo_instalacao: {
+    color: '#A78BFA', // Purple
+    bg: 'rgba(167, 139, 250, 0.15)',
+    glow: 'rgba(167, 139, 250, 0.25)',
   },
   nosso_numero: {
     color: '#38BDF8', // Sky
@@ -513,7 +528,7 @@ export default function ExtractionForm({
             />
           </div>
 
-          {/* Row 3.5: Emissão, Número do Documento e Nosso Número */}
+          {/* Row 3.5: Emissão, Número do Documento e Nosso Número / Protocolo */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <MarkedField
               label="Data de Emissão"
@@ -527,25 +542,57 @@ export default function ExtractionForm({
             />
 
             <MarkedField
-              label="Nº do Documento / Título"
+              label="Nº do Documento / NF-e"
               value={dados.numero_documento || ''}
               onChange={(val) => onChange('numero_documento', val)}
-              placeholder="Ex: 9907637002"
+              placeholder="Ex: 9907637002 ou NF-e"
               config={dados.numero_documento ? GROUNDING_CONFIG.num_doc : null}
               onFocusField={onFocusField}
               fieldName="numero_documento"
             />
 
             <MarkedField
-              label="Nosso Número"
-              value={dados.nosso_numero || ''}
-              onChange={(val) => onChange('nosso_numero', val)}
-              placeholder="Ex: 109/0012252-2-5"
-              config={dados.nosso_numero ? GROUNDING_CONFIG.nosso_numero : null}
+              label={dados.protocolo_autorizacao ? "Protocolo de Autorização" : "Nosso Número"}
+              value={dados.protocolo_autorizacao || dados.nosso_numero || ''}
+              onChange={(val) => onChange(dados.protocolo_autorizacao ? 'protocolo_autorizacao' : 'nosso_numero', val)}
+              placeholder="Ex: 3262600023218287 ou Nosso Nº"
+              config={(dados.protocolo_autorizacao || dados.nosso_numero) ? GROUNDING_CONFIG.protocolo_autorizacao : null}
               onFocusField={onFocusField}
-              fieldName="nosso_numero"
+              fieldName={dados.protocolo_autorizacao ? "protocolo_autorizacao" : "nosso_numero"}
             />
           </div>
+
+          {/* Row 3.6: Chave de Acesso / Código da Instalação (se presentes) */}
+          {(dados.chave_acesso || dados.codigo_instalacao) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {dados.codigo_instalacao && (
+                <MarkedField
+                  label="Código da Instalação"
+                  value={dados.codigo_instalacao || ''}
+                  onChange={(val) => onChange('codigo_instalacao', val)}
+                  placeholder="Ex: 2941129"
+                  config={GROUNDING_CONFIG.codigo_instalacao}
+                  onFocusField={onFocusField}
+                  fieldName="codigo_instalacao"
+                />
+              )}
+
+              {dados.chave_acesso && (
+                <div className={dados.codigo_instalacao ? "sm:col-span-2" : "sm:col-span-3"}>
+                  <MarkedField
+                    label="Chave de Acesso NF-e (54 Dígitos)"
+                    value={dados.chave_acesso || ''}
+                    onChange={(val) => onChange('chave_acesso', val)}
+                    placeholder="Chave de Acesso da Nota Fiscal Eletrônica"
+                    config={GROUNDING_CONFIG.chave_acesso}
+                    fullWidthPill={true}
+                    onFocusField={onFocusField}
+                    fieldName="chave_acesso"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Row 3.8: Encargos (Juros ao dia e Multa por atraso) */}
           {(dados.juros_dia || dados.multa_atraso || showAdditionalDetails) && (
