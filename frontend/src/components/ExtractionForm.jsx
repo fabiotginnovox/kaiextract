@@ -268,7 +268,13 @@ function MarkedField({
   const isMarked = Boolean((activeConfig || edited) && (hasContent || isFocused));
 
   return (
-    <div className={`flex flex-col ${className}`} onClick={handleClick}>
+    <div 
+      id={fieldName ? `form-field-${fieldName}` : undefined}
+      data-field={fieldName}
+      data-label={label}
+      className={`flex flex-col transition-all rounded-lg ${className}`} 
+      onClick={handleClick}
+    >
       {label && (
         <div className="flex justify-between items-center mb-1">
           <div className="flex items-center gap-1.5">
@@ -358,7 +364,8 @@ export default function ExtractionForm({
   groundingSpans = [],
   onReExtract = null,
   isReExtracting = false,
-  editedFields: propEditedFields = null
+  editedFields: propEditedFields = null,
+  focusedField = null
 }) {
   const [copiedField, setCopiedField] = useState(null);
   const [showAdvancedAmounts, setShowAdvancedAmounts] = useState(false);
@@ -437,6 +444,76 @@ export default function ExtractionForm({
     editedFields,
     onUserEdit: handleUserEdit
   }), [spanColorMap, editedFields]);
+
+  // Bidirectional Synchronization: Scroll & Focus input when focusedField changes from left column
+  useEffect(() => {
+    if (!focusedField) return;
+
+    const aliases = {
+      fornecedor_endereco: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
+      endereco_fornecedor: ['fornecedor_endereco', 'endereco_fornecedor', 'endereco'],
+      condominio_endereco: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
+      endereco_pagador: ['condominio_endereco', 'endereco_pagador', 'endereco_condominio'],
+      fornecedor_contato: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
+      contato_fornecedor: ['fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone'],
+      fornecedor_nome: ['fornecedor_nome', 'fornecedor'],
+      condominio_nome: ['condominio_nome', 'condominio'],
+      fornecedor_cnpj: ['fornecedor_cnpj', 'cnpj_fornecedor'],
+      condominio_cnpj: ['condominio_cnpj', 'cnpj_condominio'],
+      valor_total: ['valor_total', 'valor'],
+      valor_desconto: ['valor_desconto', 'desconto'],
+      valor_acrescimo: ['valor_acrescimo', 'acrescimo'],
+      data_vencimento: ['data_vencimento', 'vencimento'],
+      data_emissao: ['data_emissao', 'emissao'],
+      numero_documento: ['numero_documento', 'num_doc', 'protocolo'],
+      multa_atraso: ['multa_atraso', 'multa'],
+      juros_dia: ['juros_dia', 'juros'],
+      linha_digitavel: ['linha_digitavel', 'linha'],
+      chave_pix: ['chave_pix', 'pix'],
+      proxima_leitura: ['proxima_leitura', 'leitura'],
+      leitura_atual: ['leitura_atual'],
+      leitura_anterior: ['leitura_anterior'],
+      numero_medidor: ['numero_medidor', 'medidor'],
+      codigo_instalacao: ['codigo_instalacao', 'instalacao'],
+      chave_acesso: ['chave_acesso'],
+      nosso_numero: ['nosso_numero']
+    };
+
+    const fLower = String(focusedField).toLowerCase();
+    // Auto-expand accordions if target field is inside them
+    if (['valor_original', 'valor_desconto', 'valor_acrescimo', 'multa_atraso', 'juros_dia', 'multa', 'juros'].some(f => fLower.includes(f))) {
+      setShowAdvancedAmounts(true);
+    }
+    if (['endereco', 'contato', 'emissao', 'documento', 'medidor', 'leitura', 'instalacao', 'chave', 'protocolo', 'nosso'].some(f => fLower.includes(f))) {
+      setShowAdditionalDetails(true);
+    }
+
+    const candList = [...(aliases[focusedField] || [focusedField])];
+
+    const timer = setTimeout(() => {
+      let targetEl = null;
+      for (const cand of candList) {
+        targetEl = document.getElementById(`form-field-${cand}`)
+          || document.querySelector(`[data-field="${cand}"]`)
+          || document.querySelector(`[data-field*="${cand}"]`);
+        if (targetEl) break;
+      }
+
+      if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const inputEl = targetEl.querySelector('input');
+        if (inputEl) {
+          inputEl.focus();
+        }
+        targetEl.classList.add('form-field-pulse');
+        setTimeout(() => {
+          targetEl.classList.remove('form-field-pulse');
+        }, 1800);
+      }
+    }, 120);
+
+    return () => clearTimeout(timer);
+  }, [focusedField]);
 
   // Has enriched fields extracted
   const hasExtraDetails = Boolean(

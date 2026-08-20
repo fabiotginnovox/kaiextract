@@ -488,55 +488,55 @@ export default function GroundingViewer({
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3 mb-4 border-b border-[#453A31]">
         <div>
           <h3 className="font-serif text-base font-normal text-[#FFFEFD]">
-            Rastreabilidade da fonte
+            Auditoria Visual & Documento
           </h3>
+          <p className="text-xs text-[#BCB4AD] font-mono">
+            {groundingSpans?.length || 0} entidades ancoradas • Clique em qualquer trecho ou tag para focar no formulário
+          </p>
         </div>
 
-        <div className="flex items-center gap-1 bg-[#2E2621] p-1 rounded-lg border border-[#453A31] text-xs">
-          <button
-            onClick={() => setActiveTab('grounding')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-              activeTab === 'grounding'
-                ? 'bg-[#58493D] text-[#FFFEFD] font-semibold shadow-sm'
-                : 'text-[#97918D] hover:text-[#FFFEFD]'
-            }`}
-          >
-            <Eye className="w-3.5 h-3.5" />
-            <span>Destaques</span>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('raw')}
-            className={`px-3 py-1.5 rounded-md font-medium transition-all flex items-center gap-1.5 ${
-              activeTab === 'raw'
-                ? 'bg-[#58493D] text-[#FFFEFD] font-semibold shadow-sm'
-                : 'text-[#97918D] hover:text-[#FFFEFD]'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Texto Original</span>
-          </button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-[#1D1714] p-0.5 rounded-lg border border-[#453A31]">
+            <button
+              type="button"
+              onClick={() => setActiveTab("grounding")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                activeTab === "grounding" 
+                  ? "bg-[#D5A474] text-[#1D1714] font-semibold shadow-sm" 
+                  : "text-[#97918D] hover:text-[#FFFEFD]"
+              }`}
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Grounding</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("raw")}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1.5 ${
+                activeTab === "raw" 
+                  ? "bg-[#D5A474] text-[#1D1714] font-semibold shadow-sm" 
+                  : "text-[#97918D] hover:text-[#FFFEFD]"
+              }`}
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Texto Puro</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="mb-2 px-1 text-[11px] text-[#97918D] flex items-center justify-between">
-        <span>💡 {activeTab === 'grounding' ? 'Selecione texto para vincular ou clique nos destaques' : 'Visualizando texto OCR cru sem formatação'}</span>
-        <span className="text-[10px] text-[#D5A474]">↔ Arraste a borda/canto inferior para redimensionar ({viewerHeight}px)</span>
-      </div>
-
-      {/* Main Resizable Container Box */}
+      {/* Main OCR Content Container */}
       <div 
         ref={containerRef}
-        onMouseUp={handleSelection}
-        onClick={handleContainerClick}
         style={{ height: `${viewerHeight}px` }}
-        className={`overflow-auto rounded-xl bg-[#251E1A] border ${isDraggingResize ? 'border-[#D5A474]' : 'border-[#453A31]'} p-4 font-mono text-xs text-[#FFFEFD] leading-relaxed relative select-text transition-colors`}
+        onClick={handleContainerClick}
+        onMouseUp={handleSelection}
+        className="flex-1 w-full overflow-auto bg-[#1D1714] rounded-xl p-4 border border-[#453A31] text-xs font-mono text-[#FFFEFD] leading-relaxed select-text transition-all duration-75 relative"
       >
         {activeTab === 'grounding' ? (
-          <div>
+          <div className="kai-html-renderer">
             {displayHtml ? (
               <div 
-                className="kai-html-renderer cursor-text"
                 dangerouslySetInnerHTML={{ 
                   __html: displayHtml
                 }} 
@@ -598,13 +598,11 @@ export default function GroundingViewer({
                       type="button"
                       title={`${c.name} ${isUsed ? '(Já em uso)' : '(Disponível)'}`}
                       onClick={() => setSelectedColor(c.hex)}
-                      className={`w-4 h-4 rounded-full transition-transform flex items-center justify-center ${
-                        isSelected ? 'scale-125 ring-2 ring-[#FFFEFD]' : 'hover:scale-110'
+                      className={`w-5 h-5 rounded-full transition-transform ${
+                        isSelected ? 'scale-125 ring-2 ring-white ring-offset-1 ring-offset-[#1D1714]' : 'hover:scale-110'
                       }`}
                       style={{ backgroundColor: c.hex }}
-                    >
-                      {isSelected && <Check className="w-2.5 h-2.5 text-[#000000]" />}
-                    </button>
+                    />
                   );
                 })}
               </div>
@@ -613,30 +611,29 @@ export default function GroundingViewer({
             <div className="mb-2">
               <input
                 type="text"
-                placeholder="Filtrar campos (ex: código, valor, data)..."
+                placeholder="Buscar campo (ex: multa, pix)..."
                 value={searchFilter}
                 onChange={(e) => setSearchFilter(e.target.value)}
                 className="w-full bg-[#1D1714] border border-[#453A31] rounded-lg px-2.5 py-1 text-xs text-[#FFFEFD] placeholder-[#97918D]/60 outline-none focus:border-[#D5A474]"
               />
             </div>
 
-            <div className="max-h-44 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-              {filteredFields.map((f) => {
-                const activeColor = selectedColor || f.defaultColor;
+            <div className="max-h-48 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+              {filteredFields.map((fieldObj) => {
+                const assignedColor = selectedColor || fieldObj.defaultColor;
                 return (
                   <button
-                    key={f.field}
-                    type="button"
-                    onClick={() => handleAssignField(f)}
-                    className="w-full text-left p-1.5 rounded-lg bg-[#2E2621] hover:bg-[#58493D]/60 border border-[#453A31] hover:border-[#D5A474]/60 transition-all flex items-center justify-between group cursor-pointer"
+                    key={fieldObj.field}
+                    onClick={() => handleAssignField(fieldObj)}
+                    className="w-full flex items-center justify-between p-1.5 rounded-lg bg-[#1D1714]/60 hover:bg-[#58493D]/50 border border-[#453A31]/50 hover:border-[#D5A474]/50 transition-colors text-left group"
                   >
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: activeColor }}
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div 
+                        className="w-2.5 h-2.5 rounded-full shrink-0" 
+                        style={{ backgroundColor: assignedColor }}
                       />
-                      <span className="text-[11px] font-medium text-[#FFFEFD] group-hover:text-[#D5A474] truncate">
-                        {f.label}
+                      <span className="text-xs text-[#FFFEFD] font-medium truncate">
+                        {fieldObj.label}
                       </span>
                     </div>
                     <ArrowRight className="w-3 h-3 text-[#97918D] group-hover:text-[#D5A474] shrink-0" />
@@ -675,7 +672,10 @@ export default function GroundingViewer({
                 <button
                   key={item.label}
                   type="button"
-                  onClick={() => highlightAndScroll(item.field || item.label)}
+                  onClick={() => {
+                    highlightAndScroll(item.field || item.label);
+                    if (onFocusField) onFocusField(item.field || item.label);
+                  }}
                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-mono text-[10px] font-medium transition-all hover:scale-105 active:scale-95 cursor-pointer"
                   style={{
                     backgroundColor: `${item.color}26`,
@@ -692,16 +692,40 @@ export default function GroundingViewer({
             })
           ) : (
             <>
-              <button onClick={() => highlightAndScroll('condominio_nome')} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/40 border-b-2 border-b-[#38bdf8] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer">
+              <button 
+                onClick={() => {
+                  highlightAndScroll('condominio_nome');
+                  if (onFocusField) onFocusField('condominio_nome');
+                }} 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#38bdf8]/15 text-[#38bdf8] border border-[#38bdf8]/40 border-b-2 border-b-[#38bdf8] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer"
+              >
                 Condomínio
               </button>
-              <button onClick={() => highlightAndScroll('fornecedor_nome')} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/40 border-b-2 border-b-[#a78bfa] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer">
+              <button 
+                onClick={() => {
+                  highlightAndScroll('fornecedor_nome');
+                  if (onFocusField) onFocusField('fornecedor_nome');
+                }} 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#a78bfa]/15 text-[#a78bfa] border border-[#a78bfa]/40 border-b-2 border-b-[#a78bfa] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer"
+              >
                 Fornecedor
               </button>
-              <button onClick={() => highlightAndScroll('valor_total')} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#fbbf24]/15 text-[#fbbf24] border border-[#fbbf24]/40 border-b-2 border-b-[#fbbf24] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer">
+              <button 
+                onClick={() => {
+                  highlightAndScroll('valor_total');
+                  if (onFocusField) onFocusField('valor_total');
+                }} 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#fbbf24]/15 text-[#fbbf24] border border-[#fbbf24]/40 border-b-2 border-b-[#fbbf24] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer"
+              >
                 Valor Total
               </button>
-              <button onClick={() => highlightAndScroll('data_vencimento')} className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#f472b6]/15 text-[#f472b6] border border-[#f472b6]/40 border-b-2 border-b-[#f472b6] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer">
+              <button 
+                onClick={() => {
+                  highlightAndScroll('data_vencimento');
+                  if (onFocusField) onFocusField('data_vencimento');
+                }} 
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-[#f472b6]/15 text-[#f472b6] border border-[#f472b6]/40 border-b-2 border-b-[#f472b6] font-mono text-[10px] font-medium hover:scale-105 cursor-pointer"
+              >
                 Vencimento
               </button>
             </>

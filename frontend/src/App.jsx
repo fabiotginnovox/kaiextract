@@ -427,6 +427,7 @@ export default function App() {
                 onReExtract={handleReExtract}
                 isReExtracting={isReExtracting}
                 editedFields={editedFields}
+                focusedField={focusedField}
               />
             </div>
 
