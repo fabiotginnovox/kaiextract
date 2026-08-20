@@ -973,34 +973,54 @@ export default function ExtractionForm({
           )}
 
           {/* Dynamic Custom Extracted Fields from AI Feedback */}
-          {Object.entries(dados || {})
-            .filter(([k, v]) => ![
-              'condominio_nome', 'condominio_cnpj', 'condominio_endereco', 'endereco_pagador',
-              'fornecedor_nome', 'fornecedor_cnpj', 'fornecedor_endereco', 'endereco_fornecedor',
-              'fornecedor_contato', 'contato_fornecedor', 'tipo_conta', 'tipo_documento',
-              'valor_total', 'valor_total_float', 'valor_original', 'valor_desconto', 'valor_acrescimo',
-              'multa_atraso', 'juros_dia', 'data_vencimento', 'data_emissao', 'banco_info',
-              'numero_documento', 'nosso_numero', 'protocolo_autorizacao', 'chave_acesso',
-              'codigo_instalacao', 'proxima_leitura', 'leitura_atual', 'leitura_anterior',
-              'numero_medidor', 'descricao_servico', 'local_pagamento', 'linha_digitavel',
-              'chave_pix', 'metodo_pagamento'
-            ].includes(k) && v && String(v).trim())
-            .map(([k, v]) => {
-              const fieldLabel = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              return (
-                <MarkedField
-                  key={k}
-                  label={fieldLabel}
-                  value={v}
-                  onChange={(val) => onChange(k, val)}
-                  placeholder={fieldLabel}
-                  config={{ color: '#A78BFA', bg: 'rgba(167, 139, 250, 0.15)', glow: 'rgba(167, 139, 250, 0.25)' }}
-                  fullWidthPill={true}
-                  onFocusField={onFocusField}
-                  fieldName={k}
-                />
-              );
-            })}
+          {(() => {
+            const standardKeys = [
+              'condominio_nome', 'condominio_cnpj', 'condominio_endereco', 'endereco_pagador', 'endereco_condominio',
+              'fornecedor_nome', 'fornecedor_cnpj', 'fornecedor_endereco', 'endereco_fornecedor', 'endereco',
+              'fornecedor_contato', 'contato_fornecedor', 'contato', 'telefone', 'telefone_ligacao_gratuita',
+              'tipo_conta', 'tipo_documento', 'valor_total', 'valor_total_float', 'valor_original',
+              'valor_desconto', 'valor_acrescimo', 'multa_atraso', 'juros_dia', 'data_vencimento',
+              'data_emissao', 'banco_info', 'numero_documento', 'nosso_numero', 'protocolo_autorizacao',
+              'chave_acesso', 'codigo_instalacao', 'proxima_leitura', 'leitura_atual', 'leitura_anterior',
+              'numero_medidor', 'descricao_servico', 'local_pagamento', 'linha_digitavel', 'chave_pix',
+              'metodo_pagamento'
+            ];
+
+            const standardNormalizedKeys = new Set(standardKeys.map(k => k.toLowerCase().replace(/[\s_-]+/g, '')));
+
+            const displayedValues = new Set(
+              standardKeys
+                .map(k => dados[k] ? String(dados[k]).trim().toLowerCase() : null)
+                .filter(Boolean)
+            );
+
+            return Object.entries(dados || {})
+              .filter(([k, v]) => {
+                if (!v || !String(v).trim()) return false;
+                const kNorm = k.toLowerCase().replace(/[\s_-]+/g, '');
+                if (standardNormalizedKeys.has(kNorm)) return false;
+                if (/telefone|contato|fone|ouvidoria|gratuita|ligacao/i.test(kNorm)) return false;
+                if (/cnpj|endereco|vencimento|emissao|medidor|instalacao|protocolo|chaveacesso|linhadigitavel|chavepix|valortotal/i.test(kNorm)) return false;
+                if (displayedValues.has(String(v).trim().toLowerCase())) return false;
+                return true;
+              })
+              .map(([k, v]) => {
+                const fieldLabel = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                return (
+                  <MarkedField
+                    key={k}
+                    label={fieldLabel}
+                    value={v}
+                    onChange={(val) => onChange(k, val)}
+                    placeholder={fieldLabel}
+                    config={{ color: '#A78BFA', bg: 'rgba(167, 139, 250, 0.15)', glow: 'rgba(167, 139, 250, 0.25)' }}
+                    fullWidthPill={true}
+                    onFocusField={onFocusField}
+                    fieldName={k}
+                  />
+                );
+              });
+          })()}
 
         </div>
       </div>

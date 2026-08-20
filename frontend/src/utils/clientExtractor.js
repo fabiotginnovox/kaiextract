@@ -207,6 +207,31 @@ export function extractDocumentClientSide(text, userHint = null) {
     const cleanPromptLower = cleanPrompt.toLowerCase();
 
     if (cleanPromptLower.length >= 3) {
+      function getCanonicalKey(promptNorm) {
+        const p = promptNorm.toLowerCase();
+        if (/telefone|contato|fone|ouvidoria|gratuita|ligacao/i.test(p)) return 'fornecedor_contato';
+        if (/cnpj_condominio|cnpj_pagador|cnpj_destinatario/i.test(p)) return 'condominio_cnpj';
+        if (/cnpj_fornecedor|cnpj_favorecido|cnpj_emissor/i.test(p)) return 'fornecedor_cnpj';
+        if (/endereco_condominio|endereco_pagador|endereco_imovel/i.test(p)) return 'condominio_endereco';
+        if (/endereco_fornecedor|endereco_favorecido/i.test(p)) return 'fornecedor_endereco';
+        if (/valor_total|total_a_pagar|valor_a_pagar|total_pagar/i.test(p)) return 'valor_total';
+        if (/vencimento|data_vencimento|venc/i.test(p)) return 'data_vencimento';
+        if (/emissao|data_emissao|data_do_documento/i.test(p)) return 'data_emissao';
+        if (/proxima_leitura|prox_leitura/i.test(p)) return 'proxima_leitura';
+        if (/leitura_atual/i.test(p)) return 'leitura_atual';
+        if (/leitura_anterior/i.test(p)) return 'leitura_anterior';
+        if (/medidor|numero_medidor/i.test(p)) return 'numero_medidor';
+        if (/protocolo|protocolo_autorizacao/i.test(p)) return 'protocolo_autorizacao';
+        if (/chave_acesso|chave_nfe/i.test(p)) return 'chave_acesso';
+        if (/instalacao|codigo_instalacao|cod_instalacao/i.test(p)) return 'codigo_instalacao';
+        if (/nosso_numero/i.test(p)) return 'nosso_numero';
+        if (/linha_digitavel|codigo_barras|cod_barras/i.test(p)) return 'linha_digitavel';
+        if (/chave_pix|pix/i.test(p)) return 'chave_pix';
+        if (/multa|multa_atraso/i.test(p)) return 'multa_atraso';
+        if (/juros|juros_dia/i.test(p)) return 'juros_dia';
+        return promptNorm;
+      }
+
       function makeFlexPattern(phrase) {
         let pat = '';
         for (let i = 0; i < phrase.length; i++) {
@@ -231,16 +256,21 @@ export function extractDocumentClientSide(text, userHint = null) {
       if (valMatch) {
         const valExtracted = valMatch[1].trim();
         const safeKey = cleanPromptLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
-        doc[safeKey] = valExtracted;
-        if (/telefone|contato|fone|ouvidoria|gratuita/i.test(safeKey)) {
-          doc.fornecedor_contato = valExtracted;
+        const canonKey = getCanonicalKey(safeKey);
+        doc[canonKey] = valExtracted;
+        if (canonKey !== safeKey) {
+          delete doc[safeKey];
         }
       } else {
         const exactRegex = new RegExp(patStr, 'i');
         const exactMatch = t.match(exactRegex);
         if (exactMatch) {
           const safeKey = cleanPromptLower.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
-          doc[safeKey] = exactMatch[0].trim();
+          const canonKey = getCanonicalKey(safeKey);
+          doc[canonKey] = exactMatch[0].trim();
+          if (canonKey !== safeKey) {
+            delete doc[safeKey];
+          }
         }
       }
     }

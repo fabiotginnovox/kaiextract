@@ -204,12 +204,13 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertEqual(res.status_code, 200)
         data = res.json()
         self.assertEqual(data["status"], "success")
-        self.assertEqual(data["dados_extraidos"]["telefone_ligacao_gratuita"], "QSOQQ ZSI ZZ SQ ou QQ")
+        # Contact is canonically mapped to fornecedor_contato without duplicate fields
         self.assertEqual(data["dados_extraidos"]["fornecedor_contato"], "QSOQQ ZSI ZZ SQ ou QQ")
+        self.assertNotIn("telefone_ligacao_gratuita", data["dados_extraidos"])
         
         # Check grounding span for contact/phone exists
         spans = data["grounding_spans"]
-        tel_spans = [s for s in spans if s["field"] in ["telefone_ligacao_gratuita", "fornecedor_contato"]]
+        tel_spans = [s for s in spans if s["field"] in ["fornecedor_contato", "telefone_ligacao_gratuita"]]
         self.assertTrue(len(tel_spans) > 0)
 
 if __name__ == "__main__":

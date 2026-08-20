@@ -432,6 +432,51 @@ class KaiExtractorCore:
             clean_p_lower = clean_p.lower()
 
             if len(clean_p_lower) >= 3:
+                # Canonical alias mapping function
+                def _get_canonical_key(prompt_norm: str) -> str:
+                    p = prompt_norm.lower()
+                    if any(w in p for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita", "ligacao"]):
+                        return "fornecedor_contato"
+                    if any(w in p for w in ["cnpj_condominio", "cnpj_pagador", "cnpj_destinatario"]):
+                        return "condominio_cnpj"
+                    if any(w in p for w in ["cnpj_fornecedor", "cnpj_favorecido", "cnpj_emissor"]):
+                        return "fornecedor_cnpj"
+                    if any(w in p for w in ["endereco_condominio", "endereco_pagador", "endereco_imovel"]):
+                        return "condominio_endereco"
+                    if any(w in p for w in ["endereco_fornecedor", "endereco_favorecido"]):
+                        return "fornecedor_endereco"
+                    if any(w in p for w in ["valor_total", "total_a_pagar", "valor_a_pagar", "total_pagar"]):
+                        return "valor_total"
+                    if any(w in p for w in ["vencimento", "data_vencimento", "venc"]):
+                        return "data_vencimento"
+                    if any(w in p for w in ["emissao", "data_emissao", "data_do_documento"]):
+                        return "data_emissao"
+                    if any(w in p for w in ["proxima_leitura", "prox_leitura"]):
+                        return "proxima_leitura"
+                    if any(w in p for w in ["leitura_atual"]):
+                        return "leitura_atual"
+                    if any(w in p for w in ["leitura_anterior"]):
+                        return "leitura_anterior"
+                    if any(w in p for w in ["medidor", "numero_medidor"]):
+                        return "numero_medidor"
+                    if any(w in p for w in ["protocolo", "protocolo_autorizacao"]):
+                        return "protocolo_autorizacao"
+                    if any(w in p for w in ["chave_acesso", "chave_nfe"]):
+                        return "chave_acesso"
+                    if any(w in p for w in ["instalacao", "codigo_instalacao", "cod_instalacao"]):
+                        return "codigo_instalacao"
+                    if any(w in p for w in ["nosso_numero"]):
+                        return "nosso_numero"
+                    if any(w in p for w in ["linha_digitavel", "codigo_barras", "cod_barras"]):
+                        return "linha_digitavel"
+                    if any(w in p for w in ["chave_pix", "pix"]):
+                        return "chave_pix"
+                    if any(w in p for w in ["multa", "multa_atraso"]):
+                        return "multa_atraso"
+                    if any(w in p for w in ["juros", "juros_dia"]):
+                        return "juros_dia"
+                    return prompt_norm
+
                 # Build accent-flexible regex
                 def _make_flex_pattern(phrase: str) -> str:
                     parts = []
@@ -462,9 +507,10 @@ class KaiExtractorCore:
                     val_extracted = val_m.group(1).strip()
                     clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
                     safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
-                    extracted[safe_key] = val_extracted
-                    if any(w in safe_key for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
-                        extracted["fornecedor_contato"] = val_extracted
+                    canon_key = _get_canonical_key(safe_key)
+                    extracted[canon_key] = val_extracted
+                    if canon_key != safe_key:
+                        extracted.pop(safe_key, None)
                 else:
                     # Check if clean_p itself is present in text
                     exact_m = re.search(pat_str, text, re.IGNORECASE)
@@ -472,7 +518,10 @@ class KaiExtractorCore:
                         matched_str = exact_m.group(0).strip()
                         clean_p_norm = unicodedata.normalize('NFKD', clean_p_lower).encode('ASCII', 'ignore').decode('utf-8')
                         safe_key = re.sub(r"[^\w]+", "_", clean_p_norm).strip("_")
-                        extracted[safe_key] = matched_str
+                        canon_key = _get_canonical_key(safe_key)
+                        extracted[canon_key] = matched_str
+                        if canon_key != safe_key:
+                            extracted.pop(safe_key, None)
 
         # Chave PIX
         pix_m = re.search(r"(?:PIX|PIX Copia e Cola|Chave PIX)[:\s]*([0-9a-zA-Z\.\-@\+\$\#]{10,200})", text, re.IGNORECASE)
