@@ -239,7 +239,12 @@ export default function GroundingViewer({
   const [selectedColor, setSelectedColor] = useState(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [feedbackToast, setFeedbackToast] = useState(null);
-  const [viewerHeight, setViewerHeight] = useState(480);
+  const [viewerHeight, setViewerHeight] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return Math.min(Math.max(window.innerHeight - 340, 480), 750);
+    }
+    return 540;
+  });
   const [isDraggingResize, setIsDraggingResize] = useState(false);
   const [isReExtractModalOpen, setIsReExtractModalOpen] = useState(false);
   const [userHintText, setUserHintText] = useState('');
@@ -247,7 +252,7 @@ export default function GroundingViewer({
   const popoverRef = useRef(null);
   const isResizingRef = useRef(false);
   const startYRef = useRef(0);
-  const startHeightRef = useRef(480);
+  const startHeightRef = useRef(540);
 
   const usedColors = new Set(groundingSpans.map(s => (s.color || '').toUpperCase()));
 
@@ -274,7 +279,7 @@ export default function GroundingViewer({
     const handleMouseMove = (moveEvent) => {
       if (!isResizingRef.current) return;
       const deltaY = moveEvent.clientY - startYRef.current;
-      const newH = Math.max(280, Math.min(1200, startHeightRef.current + deltaY));
+      const newH = Math.max(260, Math.min(2200, startHeightRef.current + deltaY));
       setViewerHeight(newH);
     };
 
@@ -287,7 +292,7 @@ export default function GroundingViewer({
       document.body.style.userSelect = '';
     };
 
-    document.body.style.cursor = 'ns-resize';
+    document.body.style.cursor = 'se-resize';
     document.body.style.userSelect = 'none';
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
@@ -586,10 +591,14 @@ export default function GroundingViewer({
       {/* Main OCR Content Container */}
       <div 
         ref={containerRef}
-        style={{ height: `${viewerHeight}px` }}
+        style={{ 
+          height: `${viewerHeight}px`,
+          maxHeight: `${viewerHeight}px`,
+          minHeight: '260px'
+        }}
         onClick={handleContainerClick}
         onMouseUp={handleSelection}
-        className="flex-1 w-full overflow-auto bg-[#1D1714] rounded-xl p-4 border border-[#453A31] text-xs font-mono text-[#FFFEFD] leading-relaxed select-text transition-all duration-75 relative"
+        className="w-full overflow-y-auto overflow-x-auto bg-[#1D1714] rounded-xl p-4 border border-[#453A31] text-xs font-mono text-[#FFFEFD] leading-relaxed select-text transition-[border-color] relative flex-none shadow-inner custom-scrollbar"
       >
         {activeTab === 'grounding' ? (
           <div className="kai-html-renderer">
@@ -707,15 +716,25 @@ export default function GroundingViewer({
       {/* Interactive Bottom Drag Bar & Corner Handle */}
       <div 
         onMouseDown={handleResizeStart}
-        className="w-full py-1.5 flex items-center justify-center cursor-ns-resize group select-none hover:bg-[#58493D]/30 rounded-b-lg transition-colors -mt-1 relative"
+        className={`w-full py-2 flex items-center justify-between px-3 cursor-ns-resize group select-none hover:bg-[#58493D]/40 rounded-b-xl transition-all mt-1 relative border-t border-[#453A31]/60 ${
+          isDraggingResize ? 'bg-[#58493D]/70 ring-1 ring-[#D5A474]' : ''
+        }`}
         title="Clique e arraste para redimensionar verticalmente"
       >
+        <span className="text-[10px] font-mono text-[#97918D] group-hover:text-[#D5A474] flex items-center gap-1 select-none">
+          ↕ Altura: {viewerHeight}px
+        </span>
+
         <div className="w-16 h-1 rounded-full bg-[#58493D] group-hover:bg-[#D5A474] transition-colors" />
         
         {/* Corner Grip Icon */}
-        <div className="absolute right-1 bottom-1 text-[#97918D] group-hover:text-[#D5A474] transition-colors cursor-se-resize">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
-            <path d="M10 2L2 10M10 6L6 10M10 10L10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <div 
+          onMouseDown={handleResizeStart}
+          className="text-[#97918D] group-hover:text-[#D5A474] hover:scale-125 transition-all cursor-se-resize flex items-center justify-center p-1 rounded hover:bg-[#58493D]"
+          title="Arraste pelo canto inferior direito para redimensionar"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 2L2 12M12 6L6 12M12 10L10 12" />
           </svg>
         </div>
       </div>

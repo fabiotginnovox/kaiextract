@@ -402,10 +402,10 @@ export default function App() {
 
         {/* State 3 & 4: Split-Screen Audit & Validation */}
         {(fase === 'validacao' || fase === 'sincronizado') && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-stretch animate-fadeIn">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start animate-fadeIn">
             
             {/* Left Panel: Grounding / Raw Text Viewer */}
-            <div className="h-full">
+            <div className="w-full">
               <GroundingViewer 
                 rawText={currentDoc.rawText} 
                 htmlContent={currentDoc.htmlContent}
