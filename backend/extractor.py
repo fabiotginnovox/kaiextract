@@ -514,7 +514,18 @@ class KaiExtractorCore:
         for k, v in data.items():
             if k not in known_keys and v and str(v).strip():
                 label_formatted = k.replace("_", " ").title()
-                targets.append((k, str(v).strip(), "#818cf8", label_formatted))
+                k_l = k.lower()
+                if any(w in k_l for w in ["telefone", "contato", "fone", "ouvidoria", "gratuita"]):
+                    color = "#a78bfa"
+                elif any(w in k_l for w in ["data", "leitura", "emissao", "vencimento"]):
+                    color = "#818cf8"
+                elif any(w in k_l for w in ["valor", "total", "preco", "desconto", "taxa"]):
+                    color = "#fbbf24"
+                elif any(w in k_l for w in ["codigo", "instalacao", "medidor", "doc", "protocolo", "chave"]):
+                    color = "#60a5fa"
+                else:
+                    color = "#a78bfa"
+                targets.append((k, str(v).strip(), color, label_formatted))
 
         def _fuzzy_ocr_search(src_text: str, target: str):
             if not target or len(str(target).strip()) < 2:

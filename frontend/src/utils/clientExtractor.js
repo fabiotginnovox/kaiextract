@@ -278,7 +278,18 @@ export function extractDocumentClientSide(text, userHint = null) {
   Object.keys(doc).forEach(k => {
     if (!knownKeys.has(k) && doc[k] && String(doc[k]).trim()) {
       const labelFormatted = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      targets.push({ field: k, value: doc[k], color: '#818CF8', label: labelFormatted });
+      const kLower = k.toLowerCase();
+      let color = '#A78BFA';
+      if (['telefone', 'contato', 'fone', 'ouvidoria', 'gratuita'].some(w => kLower.includes(w))) {
+        color = '#A78BFA';
+      } else if (['data', 'leitura', 'emissao', 'vencimento'].some(w => kLower.includes(w))) {
+        color = '#818CF8';
+      } else if (['valor', 'total', 'preco', 'desconto', 'taxa'].some(w => kLower.includes(w))) {
+        color = '#FBBF24';
+      } else if (['codigo', 'instalacao', 'medidor', 'doc', 'protocolo', 'chave'].some(w => kLower.includes(w))) {
+        color = '#60A5FA';
+      }
+      targets.push({ field: k, value: doc[k], color, label: labelFormatted });
     }
   });
 

@@ -170,8 +170,6 @@ function MarkedField({
   const inputRef = useRef(null);
   const spanColorMap = React.useContext(GroundingColorContext);
 
-  const activeConfig = (fieldName && spanColorMap && spanColorMap[fieldName]) || customConfig || config;
-
   // Date formatting for Brazilian standard DD/MM/YYYY
   const displayValue = useMemo(() => {
     if (!value) return '';
@@ -181,6 +179,13 @@ function MarkedField({
     }
     return String(value);
   }, [value, isDate]);
+
+  const activeConfig = (fieldName && spanColorMap && (spanColorMap[fieldName] || spanColorMap[fieldName.toLowerCase()]))
+    || (displayValue && spanColorMap && (spanColorMap[displayValue.trim()] || spanColorMap[displayValue.trim().toLowerCase()]))
+    || (value && spanColorMap && (spanColorMap[String(value).trim()] || spanColorMap[String(value).trim().toLowerCase()]))
+    || (label && spanColorMap && (spanColorMap[label] || spanColorMap[label.toLowerCase()]))
+    || customConfig
+    || config;
 
   const handleChange = (e) => {
     const rawVal = e.target.value;
@@ -314,13 +319,28 @@ export default function ExtractionForm({
   const spanColorMap = useMemo(() => {
     const map = {};
     (groundingSpans || []).forEach(s => {
-      if (s.field && s.color) {
+      if (s.color) {
         const conf = {
           color: s.color,
           bg: `${s.color}26`,
-          glow: `${s.color}40`
+          glow: `${s.color}40`,
+          label: s.label
         };
-        map[s.field] = conf;
+        if (s.field) {
+          map[s.field] = conf;
+          map[s.field.toLowerCase()] = conf;
+          const normKey = s.field.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_+|_+$/g, '');
+          map[normKey] = conf;
+        }
+        if (s.label) {
+          map[s.label] = conf;
+          map[s.label.toLowerCase()] = conf;
+        }
+        if (s.matched_text) {
+          const txt = String(s.matched_text).trim();
+          map[txt] = conf;
+          map[txt.toLowerCase()] = conf;
+        }
         if (s.field === 'fornecedor_endereco') map['endereco_fornecedor'] = conf;
         if (s.field === 'endereco_fornecedor') map['fornecedor_endereco'] = conf;
         if (s.field === 'condominio_endereco') map['endereco_pagador'] = conf;
