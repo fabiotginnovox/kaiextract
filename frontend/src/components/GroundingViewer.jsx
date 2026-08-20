@@ -19,11 +19,11 @@ export const AVAILABLE_GROUNDING_FIELDS = [
   { field: 'chave_acesso', label: 'Chave de Acesso NF-e', defaultColor: '#38BDF8', category: 'Documento' },
   { field: 'codigo_instalacao', label: 'Código da Instalação', defaultColor: '#A78BFA', category: 'Documento' },
   { field: 'nosso_numero', label: 'Nosso Número', defaultColor: '#38BDF8', category: 'Documento' },
-  { field: 'multa_atraso', label: 'Multa por Atraso', defaultColor: '#F87171', category: 'Valores' },
+  { field: 'multa_atraso', label: 'Multa por Atraso', defaultColor: '#FB7185', category: 'Valores' },
   { field: 'juros_dia', label: 'Juros ao Dia / Encargos', defaultColor: '#FB923C', category: 'Valores' },
   { field: 'fornecedor_endereco', label: 'Endereço Fornecedor', defaultColor: '#E879F9', category: 'Endereços' },
   { field: 'condominio_endereco', label: 'Endereço Condomínio', defaultColor: '#93C5FD', category: 'Endereços' },
-  { field: 'fornecedor_contato', label: 'Contato Fornecedor', defaultColor: '#A3E635', category: 'Entidades' }
+  { field: 'fornecedor_contato', label: 'Contato Fornecedor', defaultColor: '#A78BFA', category: 'Entidades' }
 ];
 
 export const COLOR_PALETTE = [
@@ -36,12 +36,11 @@ export const COLOR_PALETTE = [
   { name: 'Sky', hex: '#38BDF8' },
   { name: 'Cyan', hex: '#0EA5E9' },
   { name: 'Blue', hex: '#60A5FA' },
-  { name: 'Coral', hex: '#F87171' },
+  { name: 'Rose', hex: '#FB7185' },
   { name: 'Orange', hex: '#FB923C' },
   { name: 'Teal', hex: '#2DD4BF' },
   { name: 'Fuchsia', hex: '#E879F9' },
   { name: 'Lime', hex: '#84CC16' },
-  { name: 'Rose', hex: '#FB7185' },
   { name: 'Amber', hex: '#F59E0B' }
 ];
 

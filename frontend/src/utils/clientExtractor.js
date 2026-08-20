@@ -263,7 +263,7 @@ export function extractDocumentClientSide(text, userHint = null) {
     { field: 'leitura_anterior', value: doc.leitura_anterior, color: '#A78BFA', label: 'Leitura Anterior' },
     { field: 'numero_medidor', value: doc.numero_medidor, color: '#60A5FA', label: 'Nº Medidor' },
     { field: 'linha_digitavel', value: doc.linha_digitavel, color: '#34D399', label: 'Linha Digitável' },
-    { field: 'multa_atraso', value: doc.multa_atraso, color: '#F87171', label: 'Multa Prevista' },
+    { field: 'multa_atraso', value: doc.multa_atraso, color: '#FB7185', label: 'Multa Prevista' },
     { field: 'juros_dia', value: doc.juros_dia, color: '#FB923C', label: 'Juros/Dia' },
     { field: 'protocolo_autorizacao', value: doc.protocolo_autorizacao, color: '#60A5FA', label: 'Protocolo' },
     { field: 'numero_documento', value: doc.numero_documento, color: '#60A5FA', label: 'Nº Doc / NF-e' },

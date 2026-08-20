@@ -127,9 +127,9 @@ export const GROUNDING_CONFIG = {
     glow: 'rgba(251, 146, 60, 0.25)',
   },
   multa: {
-    color: '#F87171', // Coral / Red
-    bg: 'rgba(248, 113, 113, 0.15)',
-    glow: 'rgba(248, 113, 113, 0.25)',
+    color: '#FB7185', // Rose / Salmon
+    bg: 'rgba(251, 113, 133, 0.15)',
+    glow: 'rgba(251, 113, 133, 0.25)',
   },
   linha: {
     color: '#34D399', // Emerald
@@ -143,13 +143,20 @@ export const GROUNDING_CONFIG = {
   }
 };
 
+export const USER_EDITED_CONFIG = {
+  color: '#FF0000', // Pure Red - Exclusively reserved for user manual edits
+  bg: 'rgba(255, 0, 0, 0.15)',
+  glow: 'rgba(255, 0, 0, 0.35)',
+  label: 'Editado Manualmente'
+};
+
 export const GroundingColorContext = React.createContext({});
 
 /**
  * MarkedField Component
  * Renders an input field where extracted/grounded values display an inline marker
- * with bottom highlight line and glowing background in the exact matching grounding color,
- * preserving high contrast (WCAG AAA compliant text) and full editability.
+ * with bottom highlight line and glowing background in the exact matching grounding color.
+ * When edited by the user, immediately turns to Red #FF0000 (exclusively reserved for user edits).
  */
 function MarkedField({
   label,
@@ -164,15 +171,22 @@ function MarkedField({
   inputClassName = '',
   onFocusField = null,
   fieldName = '',
-  customConfig = null
+  customConfig = null,
+  isEdited = false,
+  onUserEdit = null
 }) {
   const [isFocused, setIsFocused] = useState(false);
+  const [hasLocalEdit, setHasLocalEdit] = useState(false);
   const inputRef = useRef(null);
-  const spanColorMap = React.useContext(GroundingColorContext);
+  const colorContext = React.useContext(GroundingColorContext);
+  const spanColorMap = colorContext?.spanColorMap || (colorContext?.color ? {} : colorContext) || {};
+  const editedFields = colorContext?.editedFields || {};
+
+  const edited = isEdited || hasLocalEdit || Boolean(fieldName && editedFields[fieldName]);
 
   // Date formatting for Brazilian standard DD/MM/YYYY
   const displayValue = useMemo(() => {
-    if (!value) return '';
+    if (!value && value !== 0) return '';
     if (isDate && /^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
       const [y, m, d] = String(value).split('-');
       return `${d}/${m}/${y}`;
@@ -180,14 +194,23 @@ function MarkedField({
     return String(value);
   }, [value, isDate]);
 
-  const activeConfig = (fieldName && spanColorMap && (spanColorMap[fieldName] || spanColorMap[fieldName.toLowerCase()]))
-    || (displayValue && spanColorMap && (spanColorMap[displayValue.trim()] || spanColorMap[displayValue.trim().toLowerCase()]))
-    || (value && spanColorMap && (spanColorMap[String(value).trim()] || spanColorMap[String(value).trim().toLowerCase()]))
-    || (label && spanColorMap && (spanColorMap[label] || spanColorMap[label.toLowerCase()]))
-    || customConfig
-    || config;
+  const activeConfig = edited
+    ? USER_EDITED_CONFIG
+    : ((fieldName && spanColorMap && (spanColorMap[fieldName] || spanColorMap[fieldName.toLowerCase()]))
+      || (displayValue && spanColorMap && (spanColorMap[displayValue.trim()] || spanColorMap[displayValue.trim().toLowerCase()]))
+      || (value && spanColorMap && (spanColorMap[String(value).trim()] || spanColorMap[String(value).trim().toLowerCase()]))
+      || (label && spanColorMap && (spanColorMap[label] || spanColorMap[label.toLowerCase()]))
+      || customConfig
+      || config);
 
   const handleChange = (e) => {
+    setHasLocalEdit(true);
+    if (onUserEdit && fieldName) {
+      onUserEdit(fieldName);
+    }
+    if (colorContext?.onUserEdit && fieldName) {
+      colorContext.onUserEdit(fieldName);
+    }
     const rawVal = e.target.value;
     if (isDate && /^\d{2}\/\d{2}\/\d{4}$/.test(rawVal)) {
       const [d, m, y] = rawVal.split('/');
@@ -212,24 +235,33 @@ function MarkedField({
   };
 
   const hasContent = Boolean(displayValue && displayValue.trim() && displayValue !== '/');
-  const isMarked = Boolean(activeConfig && hasContent);
+  const isMarked = Boolean((activeConfig || edited) && (hasContent || isFocused));
 
   return (
     <div className={`flex flex-col ${className}`} onClick={handleClick}>
       {label && (
         <div className="flex justify-between items-center mb-1">
-          <label className="font-mono text-[10px] uppercase tracking-wider text-[#BCB4AD] cursor-pointer">
-            {label}
-          </label>
+          <div className="flex items-center gap-1.5">
+            <label className="font-mono text-[10px] uppercase tracking-wider text-[#BCB4AD] cursor-pointer">
+              {label}
+            </label>
+            {edited && (
+              <span className="text-[9px] font-mono font-bold text-[#FF0000] bg-[#FF0000]/15 px-1 py-0.2 rounded border border-[#FF0000]/40 animate-pulse">
+                EDITADO
+              </span>
+            )}
+          </div>
           {rightElement}
         </div>
       )}
 
       <div
         className={`w-full bg-[#2E2621] border rounded-lg p-1.5 transition-all min-h-[38px] flex items-center cursor-text ${
-          isFocused
-            ? 'border-[#D5A474] ring-1 ring-[#D5A474]/20'
-            : 'border-[#453A31] hover:border-[#58493D]'
+          edited
+            ? 'border-[#FF0000]/60 ring-1 ring-[#FF0000]/20'
+            : isFocused
+              ? 'border-[#D5A474] ring-1 ring-[#D5A474]/20'
+              : 'border-[#453A31] hover:border-[#58493D]'
         }`}
       >
         {isMarked ? (
@@ -352,6 +384,25 @@ export default function ExtractionForm({
     return map;
   }, [groundingSpans]);
 
+  const [editedFields, setEditedFields] = useState({});
+
+  const handleUserEdit = (fieldName) => {
+    if (fieldName) {
+      setEditedFields(prev => ({ ...prev, [fieldName]: true }));
+    }
+  };
+
+  const handleReset = () => {
+    setEditedFields({});
+    if (onReset) onReset();
+  };
+
+  const colorContextValue = useMemo(() => ({
+    spanColorMap,
+    editedFields,
+    onUserEdit: handleUserEdit
+  }), [spanColorMap, editedFields]);
+
   // Has enriched fields extracted
   const hasExtraDetails = Boolean(
     dados.endereco_fornecedor || 
@@ -364,7 +415,7 @@ export default function ExtractionForm({
   );
 
   return (
-    <GroundingColorContext.Provider value={spanColorMap}>
+    <GroundingColorContext.Provider value={colorContextValue}>
       <div className="bg-[#2E2621] rounded-2xl p-5 flex flex-col justify-between h-full border border-[#453A31] overflow-y-auto max-h-[85vh] relative">
       
       {/* Organic Scanning / Re-extracting Loader Overlay */}
@@ -822,7 +873,7 @@ export default function ExtractionForm({
                   value={v}
                   onChange={(val) => onChange(k, val)}
                   placeholder={fieldLabel}
-                  config={{ color: '#A3E635', bg: 'rgba(163, 230, 53, 0.15)', glow: 'rgba(163, 230, 53, 0.25)' }}
+                  config={{ color: '#A78BFA', bg: 'rgba(167, 139, 250, 0.15)', glow: 'rgba(167, 139, 250, 0.25)' }}
                   fullWidthPill={true}
                   onFocusField={onFocusField}
                   fieldName={k}
@@ -837,7 +888,7 @@ export default function ExtractionForm({
       <div className="pt-4 mt-4 border-t border-[#453A31] flex flex-wrap items-center justify-between gap-3">
         <button
           type="button"
-          onClick={onReset}
+          onClick={handleReset}
           className="text-xs text-[#97918D] hover:text-[#FFFEFD] flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-[#453A31] transition-colors"
         >
           <RotateCcw className="w-3.5 h-3.5" />

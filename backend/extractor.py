@@ -495,7 +495,7 @@ class KaiExtractorCore:
             ("data_vencimento", data.get("data_vencimento"), "#f472b6", "Vencimento"),
             ("data_emissao", data.get("data_emissao"), "#818cf8", "Emissão"),
             ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
-            ("multa_atraso", data.get("multa_atraso"), "#f87171", "Multa Prevista"),
+            ("multa_atraso", data.get("multa_atraso"), "#fb7185", "Multa Prevista"),
             ("juros_dia", data.get("juros_dia"), "#fb923c", "Juros/Dia"),
             ("proxima_leitura", data.get("proxima_leitura"), "#818cf8", "Próxima Leitura"),
             ("leitura_atual", data.get("leitura_atual"), "#a78bfa", "Leitura Atual"),
