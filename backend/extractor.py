@@ -395,6 +395,42 @@ class KaiExtractorCore:
                 banco_linha = re.search(r"(?:3419|2379|0019|1049|0339)[\w\.\s]{35,60}", text)
                 extracted["linha_digitavel"] = banco_linha.group(0).split("\n")[0].strip() if banco_linha else ""
 
+        # Informações Técnicas e Concessionárias (Leituras, Medidor, Próxima Leitura)
+        prox_m = re.search(r"(?:Pr[óo]xima\s+Leitura|Pr[oó]x\.?\s*Leitura)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
+        if prox_m:
+            raw_prox = prox_m.group(1).strip()
+            if "/" in raw_prox:
+                d, m, y = raw_prox.split("/")
+                extracted["proxima_leitura"] = f"{y}-{m}-{d}"
+            else:
+                extracted["proxima_leitura"] = raw_prox
+        else:
+            extracted["proxima_leitura"] = ""
+
+        leit_at_m = re.search(r"Leitura\s+Atual[:\s]*(\d{2}/\d{2}/\d{4}|\d+)", text, re.IGNORECASE)
+        extracted["leitura_atual"] = leit_at_m.group(1).strip() if leit_at_m else ""
+
+        leit_ant_m = re.search(r"Leitura\s+Anterior[:\s]*(\d{2}/\d{2}/\d{4}|\d+)", text, re.IGNORECASE)
+        extracted["leitura_anterior"] = leit_ant_m.group(1).strip() if leit_ant_m else ""
+
+        med_m = re.search(r"(?:N[°º\s]*Medidor|Medidor)[:\s\-\.]*(\d+)", text, re.IGNORECASE)
+        extracted["numero_medidor"] = med_m.group(1).strip() if med_m else ""
+
+        # Dynamic Semantic Listener: If user_hint requests any arbitrary field found in the document
+        if user_hint:
+            h_clean = user_hint.lower()
+            for line in lines:
+                line_clean = line.strip()
+                # If line contains a label and a value (e.g. "PRÓXIMA LEITURA 30/06/2026", "N MEDIDOR - 81788399")
+                label_val_m = re.match(r"^([A-ZÀ-Úa-zà-ú\s\.\/°º\-_]{3,35})[:\s\-]+([0-9\/\-\.,\w]{2,50})$", line_clean)
+                if label_val_m:
+                    k, v = label_val_m.group(1).strip(), label_val_m.group(2).strip()
+                    k_words = [w for w in re.findall(r"[a-zà-ú]{3,}", k.lower()) if w not in ["para", "com", "ser", "que", "uma", "dos", "das"]]
+                    # If words of the document line label appear in user hint
+                    if k_words and any(w in h_clean for w in k_words):
+                        safe_key = re.sub(r"\W+", "_", k.lower()).strip("_")
+                        extracted[safe_key] = v
+
         # Chave PIX
         pix_m = re.search(r"(?:PIX|PIX Copia e Cola|Chave PIX)[:\s]*([0-9a-zA-Z\.\-@\+\$\#]{10,200})", text, re.IGNORECASE)
         extracted["chave_pix"] = pix_m.group(1).strip() if pix_m else ""
@@ -418,6 +454,10 @@ class KaiExtractorCore:
             ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
             ("multa_atraso", data.get("multa_atraso"), "#f87171", "Multa Prevista"),
             ("juros_dia", data.get("juros_dia"), "#fb923c", "Juros/Dia"),
+            ("proxima_leitura", data.get("proxima_leitura"), "#818cf8", "Próxima Leitura"),
+            ("leitura_atual", data.get("leitura_atual"), "#a78bfa", "Leitura Atual"),
+            ("leitura_anterior", data.get("leitura_anterior"), "#a78bfa", "Leitura Anterior"),
+            ("numero_medidor", data.get("numero_medidor"), "#60a5fa", "Nº Medidor"),
             ("protocolo_autorizacao", data.get("protocolo_autorizacao"), "#60a5fa", "Protocolo"),
             ("numero_documento", data.get("numero_documento"), "#60a5fa", "Nº Doc / NF-e"),
             ("nosso_numero", data.get("nosso_numero"), "#38bdf8", "Nosso Nº"),
@@ -426,11 +466,23 @@ class KaiExtractorCore:
             ("chave_pix", data.get("chave_pix"), "#2dd4bf", "Chave PIX")
         ]
 
+        # Add any dynamic custom entities requested by the user
+        known_keys = set(t[0] for t in targets)
+        for k, v in data.items():
+            if k not in known_keys and v and str(v).strip():
+                label_formatted = k.replace("_", " ").title()
+                targets.append((k, str(v).strip(), "#818cf8", label_formatted))
+
         def _fuzzy_ocr_search(src_text: str, target: str):
             if not target or len(str(target).strip()) < 2:
                 return None
             
             tgt = str(target).strip()
+            # If target is ISO date YYYY-MM-DD, convert to DD/MM/YYYY for document text searching
+            if re.match(r"^\d{4}-\d{2}-\d{2}$", tgt):
+                y, m, d = tgt.split("-")
+                tgt = f"{d}/{m}/{y}"
+
             # 1. Direct search
             idx = src_text.find(tgt)
             if idx != -1:

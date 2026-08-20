@@ -123,5 +123,38 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertTrue(len(protocol_spans) > 0)
         self.assertIn("3262600023218287", [s["matched_text"] for s in protocol_spans])
 
+    def test_re_extract_with_next_reading_date(self):
+        neoenergia_text = (
+            "Neoenergia Pernambuco\n"
+            "NOME DO CLIENTE:\n"
+            "EDIFICIO AVIS LIBERTAS\n"
+            "TOTAL A PAGAR\n"
+            "R$ 9.024,54\n"
+            "DATAS DE LEITURAS\n"
+            "LEITURA ANTERIOR 30/04/2026\n"
+            "LEITURA ATUAL 31/05/2026\n"
+            "N° DE DIAS 31\n"
+            "PRÓXIMA LEITURA 30/06/2026\n"
+            "DEMONSTRATIVO DE CONSUMO\n"
+            "N MEDIDOR - 81788399\n"
+        )
+        payload = {
+            "text": neoenergia_text,
+            "user_hint": "Data da próxima leitura poderia ser marcada",
+            "doc_id": "neoenergia_reading_test"
+        }
+        res = self.client.post("/api/re-extract", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["dados_extraidos"]["proxima_leitura"], "2026-06-30")
+        self.assertEqual(data["dados_extraidos"]["numero_medidor"], "81788399")
+        
+        # Check grounding span for proxima_leitura
+        spans = data["grounding_spans"]
+        reading_spans = [s for s in spans if s["field"] == "proxima_leitura"]
+        self.assertTrue(len(reading_spans) > 0)
+        self.assertIn("30/06/2026", [s["matched_text"] for s in reading_spans])
+
 if __name__ == "__main__":
     unittest.main()

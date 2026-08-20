@@ -58,7 +58,7 @@ class ERPNormalizer:
         linha_dig = str(raw_data.get("linha_digitavel", "")).strip()
         chave_pix = str(raw_data.get("chave_pix", "")).strip()
 
-        return {
+        res = {
             "condominio_nome": str(raw_data.get("condominio_nome", "")).strip(),
             "condominio_cnpj": format_cnpj(raw_data.get("condominio_cnpj")),
             "condominio_endereco": str(raw_data.get("condominio_endereco", "")).strip(),
@@ -82,12 +82,23 @@ class ERPNormalizer:
             "protocolo_autorizacao": str(raw_data.get("protocolo_autorizacao", "")).strip(),
             "chave_acesso": str(raw_data.get("chave_acesso", "")).strip(),
             "codigo_instalacao": str(raw_data.get("codigo_instalacao", "")).strip(),
+            "proxima_leitura": str(raw_data.get("proxima_leitura", "")).strip(),
+            "leitura_atual": str(raw_data.get("leitura_atual", "")).strip(),
+            "leitura_anterior": str(raw_data.get("leitura_anterior", "")).strip(),
+            "numero_medidor": str(raw_data.get("numero_medidor", "")).strip(),
             "descricao_servico": str(raw_data.get("descricao_servico", "")).strip(),
             "local_pagamento": str(raw_data.get("local_pagamento", "")).strip(),
             "linha_digitavel": linha_dig,
             "chave_pix": chave_pix,
             "metodo_pagamento": "PIX" if chave_pix and not linha_dig else ("Boleto" if linha_dig else "Transferência/Outro")
         }
+
+        # Preserve any additional dynamic custom attributes
+        for k, v in raw_data.items():
+            if k not in res and v is not None:
+                res[k] = str(v).strip()
+
+        return res
 
     @staticmethod
     def to_superlogica_format(data: Dict[str, Any]) -> Dict[str, Any]:

@@ -158,9 +158,31 @@ export function extractDocumentClientSide(text, userHint = null) {
   const nfMatch = t.match(/Nota\s+Fiscal\s+N[º°\s]*([0-9]+)/i);
   if (nfMatch && !doc.numero_documento) doc.numero_documento = nfMatch[1].trim();
 
+  // Informações Técnicas de Consumo
+  const proxMatch = t.match(/(?:Pr[óo]xima\s+Leitura|Pr[oó]x\.?\s*Leitura)[:\s]*(\d{2}\/\d{2}\/\d{4}|\d{4}-\d{2}-\d{2})/i);
+  if (proxMatch) {
+    const rawP = proxMatch[1].trim();
+    if (rawP.includes('/')) {
+      const [d, m, y] = rawP.split('/');
+      doc.proxima_leitura = `${y}-${m}-${d}`;
+    } else {
+      doc.proxima_leitura = rawP;
+    }
+  }
+
+  const leitAtMatch = t.match(/Leitura\s+Atual[:\s]*(\d{2}\/\d{2}\/\d{4}|\d+)/i);
+  if (leitAtMatch) doc.leitura_atual = leitAtMatch[1].trim();
+
+  const leitAntMatch = t.match(/Leitura\s+Anterior[:\s]*(\d{2}\/\d{2}\/\d{4}|\d+)/i);
+  if (leitAntMatch) doc.leitura_anterior = leitAntMatch[1].trim();
+
+  const medMatch = t.match(/(?:N[°º\s]*Medidor|Medidor)[:\s\-\.]*(\d+)/i);
+  if (medMatch) doc.numero_medidor = medMatch[1].trim();
+
   // 1.5 Apply User Feedback Hint (Feedback Loop)
   if (userHint) {
     const h = userHint.trim();
+    const hLower = h.toLowerCase();
     const condoMatch = h.match(/(?:nome\s+do\s+condom[ií]nio\s+(?:[eé]|ser[aá])|condom[ií]nio[:\s]+|destinat[aá]rio[:\s]+)\s*([^\n\r,\.;]+)/i);
     if (condoMatch) {
       doc.condominio_nome = condoMatch[1].trim().replace(/^["']|["']$/g, '');
@@ -179,6 +201,23 @@ export function extractDocumentClientSide(text, userHint = null) {
         doc.numero_documento = doc.protocolo_autorizacao;
       }
     }
+
+    // Dynamic Line Matching against prompt
+    const lines = t.split('\n').map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const lineMatch = line.match(/^([A-ZÀ-Úa-zà-ú\s\.\/°º\-_]{3,35})[:\s\-]+([0-9\/\-\.,\w]{2,50})$/);
+      if (lineMatch) {
+        const k = lineMatch[1].trim();
+        const v = lineMatch[2].trim();
+        const kWords = (k.toLowerCase().match(/[a-zà-ú]{3,}/g) || []).filter(w => !['para', 'com', 'ser', 'que', 'uma', 'dos', 'das'].includes(w));
+        if (kWords.length > 0 && kWords.some(w => hLower.includes(w))) {
+          const safeKey = k.toLowerCase().replace(/\W+/g, '_').replace(/^_+|_+$/g, '');
+          if (!doc[safeKey]) {
+            doc[safeKey] = v;
+          }
+        }
+      }
+    }
   }
 
   // 2. Build Grounding Spans with Fuzzy OCR Matcher
@@ -193,6 +232,10 @@ export function extractDocumentClientSide(text, userHint = null) {
     { field: 'valor_total', value: doc.valor_total, color: '#FBBF24', label: 'Valor Total' },
     { field: 'data_vencimento', value: doc.data_vencimento, color: '#F472B6', label: 'Vencimento' },
     { field: 'data_emissao', value: doc.data_emissao, color: '#818CF8', label: 'Emissão' },
+    { field: 'proxima_leitura', value: doc.proxima_leitura, color: '#818CF8', label: 'Próxima Leitura' },
+    { field: 'leitura_atual', value: doc.leitura_atual, color: '#A78BFA', label: 'Leitura Atual' },
+    { field: 'leitura_anterior', value: doc.leitura_anterior, color: '#A78BFA', label: 'Leitura Anterior' },
+    { field: 'numero_medidor', value: doc.numero_medidor, color: '#60A5FA', label: 'Nº Medidor' },
     { field: 'linha_digitavel', value: doc.linha_digitavel, color: '#34D399', label: 'Linha Digitável' },
     { field: 'multa_atraso', value: doc.multa_atraso, color: '#F87171', label: 'Multa Prevista' },
     { field: 'juros_dia', value: doc.juros_dia, color: '#FB923C', label: 'Juros/Dia' },
@@ -203,6 +246,15 @@ export function extractDocumentClientSide(text, userHint = null) {
     { field: 'nosso_numero', value: doc.nosso_numero, color: '#38BDF8', label: 'Nosso Nº' },
     { field: 'chave_pix', value: doc.chave_pix, color: '#2DD4BF', label: 'Chave PIX' }
   ];
+
+  // Add any dynamic custom entities requested by the user
+  const knownKeys = new Set(targets.map(t => t.field));
+  Object.keys(doc).forEach(k => {
+    if (!knownKeys.has(k) && doc[k] && String(doc[k]).trim()) {
+      const labelFormatted = k.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      targets.push({ field: k, value: doc[k], color: '#818CF8', label: labelFormatted });
+    }
+  });
 
   const groundingSpans = [];
   const usedRanges = [];

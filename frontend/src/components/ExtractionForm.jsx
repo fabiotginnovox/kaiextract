@@ -91,6 +91,26 @@ export const GROUNDING_CONFIG = {
     bg: 'rgba(167, 139, 250, 0.15)',
     glow: 'rgba(167, 139, 250, 0.25)',
   },
+  proxima_leitura: {
+    color: '#818CF8', // Indigo
+    bg: 'rgba(129, 140, 248, 0.15)',
+    glow: 'rgba(129, 140, 248, 0.25)',
+  },
+  leitura_atual: {
+    color: '#A78BFA', // Purple
+    bg: 'rgba(167, 139, 250, 0.15)',
+    glow: 'rgba(167, 139, 250, 0.25)',
+  },
+  leitura_anterior: {
+    color: '#A78BFA', // Purple
+    bg: 'rgba(167, 139, 250, 0.15)',
+    glow: 'rgba(167, 139, 250, 0.25)',
+  },
+  numero_medidor: {
+    color: '#60A5FA', // Sky
+    bg: 'rgba(96, 165, 250, 0.15)',
+    glow: 'rgba(96, 165, 250, 0.25)',
+  },
   nosso_numero: {
     color: '#38BDF8', // Sky
     bg: 'rgba(56, 189, 248, 0.15)',
@@ -590,6 +610,48 @@ export default function ExtractionForm({
                     fieldName="chave_acesso"
                   />
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Row 3.7: Leituras e Medição da Concessionária (se presentes) */}
+          {(dados.proxima_leitura || dados.leitura_atual || dados.leitura_anterior || dados.numero_medidor) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              {dados.proxima_leitura && (
+                <MarkedField
+                  label="Data da Próxima Leitura"
+                  value={dados.proxima_leitura || ''}
+                  onChange={(val) => onChange('proxima_leitura', val)}
+                  placeholder="DD/MM/AAAA"
+                  isDate={true}
+                  config={GROUNDING_CONFIG.proxima_leitura}
+                  onFocusField={onFocusField}
+                  fieldName="proxima_leitura"
+                />
+              )}
+
+              {dados.leitura_atual && (
+                <MarkedField
+                  label="Leitura Atual"
+                  value={dados.leitura_atual || ''}
+                  onChange={(val) => onChange('leitura_atual', val)}
+                  placeholder="Data ou valor"
+                  config={GROUNDING_CONFIG.leitura_atual}
+                  onFocusField={onFocusField}
+                  fieldName="leitura_atual"
+                />
+              )}
+
+              {dados.numero_medidor && (
+                <MarkedField
+                  label="Nº do Medidor"
+                  value={dados.numero_medidor || ''}
+                  onChange={(val) => onChange('numero_medidor', val)}
+                  placeholder="Ex: 81788399"
+                  config={GROUNDING_CONFIG.numero_medidor}
+                  onFocusField={onFocusField}
+                  fieldName="numero_medidor"
+                />
               )}
             </div>
           )}
