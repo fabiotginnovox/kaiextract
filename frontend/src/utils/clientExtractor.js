@@ -150,7 +150,7 @@ export function extractDocumentClientSide(text, userHint = null) {
   if (protMatch) doc.protocolo_autorizacao = protMatch[1].trim();
 
   const chaveMatch = t.match(/Chave\s+de\s+Acesso[:\s]*\n?([0-9\s]{40,60})/i);
-  if (chaveMatch) doc.chave_acesso = chaveMatch[1].replace(/\s+/g, '').trim();
+  if (chaveMatch) doc.chave_acesso = chaveMatch[1].trim();
 
   const instMatch = t.match(/C[óo]digo\s+da\s+Instala[çc][ãa]o[:\s]*([0-9]+)/i);
   if (instMatch) doc.codigo_instalacao = instMatch[1].trim();

@@ -361,7 +361,7 @@ class KaiExtractorCore:
 
         # Chave de Acesso
         chave_m = re.search(r"Chave\s+de\s+Acesso[:\s]*\n?([0-9\s]{40,60})", text, re.IGNORECASE)
-        extracted["chave_acesso"] = chave_m.group(1).replace(" ", "").strip() if chave_m else ""
+        extracted["chave_acesso"] = chave_m.group(1).strip() if chave_m else ""
 
         # Código da Instalação
         inst_m = re.search(r"C[óo]digo\s+da\s+Instala[çc][ãa]o[:\s]*([0-9]+)", text, re.IGNORECASE)
@@ -492,6 +492,14 @@ class KaiExtractorCore:
             lower_idx = src_text.lower().find(tgt.lower())
             if lower_idx != -1:
                 return lower_idx, lower_idx + len(tgt), src_text[lower_idx:lower_idx + len(tgt)]
+
+            # 2.5 Digit Sequence Search with Optional Whitespaces (for Chave de Acesso, Linha Digitável, Protocolo)
+            digits_only = re.sub(r"\D", "", tgt)
+            if len(digits_only) >= 14:
+                dig_pat = r"\s*".join(list(digits_only))
+                m_dig = re.search(dig_pat, src_text, re.IGNORECASE)
+                if m_dig:
+                    return m_dig.start(), m_dig.end(), m_dig.group(0)
 
             # 3. OCR Tolerant Regex (handles Z->2, S->5, O->0, L->1, missing spaces, etc.)
             pattern_parts = []

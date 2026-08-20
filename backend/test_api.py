@@ -156,5 +156,33 @@ class TestAPIEndpoints(unittest.TestCase):
         self.assertTrue(len(reading_spans) > 0)
         self.assertIn("30/06/2026", [s["matched_text"] for s in reading_spans])
 
+    def test_re_extract_with_chave_de_acesso(self):
+        neoenergia_text = (
+            "Neoenergia Pernambuco\n"
+            "NOME DO CLIENTE:\n"
+            "EDIFICIO AVIS LIBERTAS\n"
+            "TOTAL A PAGAR\n"
+            "R$ 9.024,54\n"
+            "Chave de Acesso:\n"
+            "2625 0610 8359 3200 0108 5600 0415 1973 6510 8578 4387\n"
+            "Protocolo de Autorização: 3262600023218287\n"
+        )
+        payload = {
+            "text": neoenergia_text,
+            "user_hint": "Marque a Chave de Acesso",
+            "doc_id": "neoenergia_chave_test"
+        }
+        res = self.client.post("/api/re-extract", json=payload)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "success")
+        self.assertTrue(bool(data["dados_extraidos"]["chave_acesso"]))
+        
+        # Check grounding span for chave_acesso exists
+        spans = data["grounding_spans"]
+        chave_spans = [s for s in spans if s["field"] == "chave_acesso"]
+        self.assertTrue(len(chave_spans) > 0)
+        self.assertIn("2625", chave_spans[0]["matched_text"])
+
 if __name__ == "__main__":
     unittest.main()

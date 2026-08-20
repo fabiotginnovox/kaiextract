@@ -63,6 +63,23 @@ export function findOcrFuzzyMatch(srcText, target) {
     return { start: lowerIdx, end: lowerIdx + tgt.length, matched_text: srcText.substring(lowerIdx, lowerIdx + tgt.length) };
   }
 
+  // 2.5 Digit Sequence Search with Optional Whitespaces (for Chave de Acesso, Linha Digitável, Protocolos)
+  const digitsOnly = tgt.replace(/\D/g, '');
+  if (digitsOnly.length >= 14) {
+    try {
+      const digitPattern = digitsOnly.split('').join('\\s*');
+      const regexDig = new RegExp(digitPattern, 'i');
+      const mDig = regexDig.exec(srcText);
+      if (mDig) {
+        return {
+          start: mDig.index,
+          end: mDig.index + mDig[0].length,
+          matched_text: mDig[0]
+        };
+      }
+    } catch (e) {}
+  }
+
   // 3. OCR tolerant regex (handles 2<->Z, 5<->S, 0<->O, 1<->L, spaces, commas/dots)
   let pattern = '';
   for (let i = 0; i < tgt.length; i++) {
