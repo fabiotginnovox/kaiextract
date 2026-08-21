@@ -33,6 +33,8 @@ ENV/
 # Production builds & runtime doc outputs
 frontend/dist/
 frontend/dist-ssr/
+frontend/.vite/
+outputs/
 backend/outputs/doc_*
 *.local
 

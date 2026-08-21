@@ -6,11 +6,12 @@ import ExtractionForm from './components/ExtractionForm';
 import PdfViewer from './components/PdfViewer';
 import SuccessModal from './components/SuccessModal';
 import AuditModal from './components/AuditModal';
+import StudioIA from './components/StudioIA';
 import { extractDocumentClientSide, extractTextFromPdf, normalizeSelectedValue } from './utils/clientExtractor';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
-  const [fase, setFase] = useState('upload'); // 'upload' | 'processando' | 'validacao' | 'sincronizado'
+  const [fase, setFase] = useState('upload'); // 'upload' | 'processando' | 'validacao' | 'sincronizado' | 'studio'
   const [erpDestino, setErpDestino] = useState('superlogica'); // 'superlogica' | 'condominia' | 'universal'
   const [samples, setSamples] = useState([]);
   const [focusedField, setFocusedField] = useState(null);
@@ -666,6 +667,15 @@ export default function App() {
               </div>
             </div>
           )
+        )}
+
+        {/* State 5: Estúdio de IA (Few-Shot Studio & Calibração) */}
+        {fase === 'studio' && (
+          <StudioIA 
+            onTestInPipeline={(docText) => {
+              handleProcessText(docText, "documento_calibrado");
+            }}
+          />
         )}
 
       </main>

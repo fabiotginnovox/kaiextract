@@ -34,18 +34,18 @@ export default function Navbar({
       </div>
 
       {/* Interactive Stepper / Workflow Pipeline */}
-      <nav aria-label="Fluxo de Extração" className="hidden md:flex items-center gap-2 text-xs bg-[#251E1A] p-1 rounded-lg border border-[#453A31]">
+      <nav aria-label="Fluxo de Extração" className="hidden md:flex items-center gap-1.5 text-xs bg-[#251E1A] p-1 rounded-lg border border-[#453A31]">
         <button 
           type="button"
           onClick={onReset}
-          className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+          className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
             fase === 'upload' 
               ? 'bg-[#58493D] text-[#FFFEFD] font-medium border border-[#D5A474]/50 shadow-sm' 
               : 'text-[#97918D] hover:text-[#FFFEFD] hover:bg-[#58493D]/30'
           }`}
-          title="Etapa 1: Carregar Fatura / Selecionar TXT de Exemplo"
+          title="Etapa: Carregar Fatura / Selecionar TXT de Exemplo"
         >
-          <span>Enviar Fatura</span>
+          <span>Envio de Fatura</span>
         </button>
         
         <ArrowRight className="w-3.5 h-3.5 text-[#48403A]" />
@@ -56,12 +56,12 @@ export default function Navbar({
             if (hasDoc && setFase) setFase('validacao');
           }}
           disabled={!hasDoc}
-          className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
             fase === 'processando' || fase === 'validacao' 
               ? 'bg-[#58493D] text-[#FFFEFD] font-medium border border-[#D5A474]/50 shadow-sm' 
               : hasDoc ? 'text-[#97918D] hover:text-[#FFFEFD] hover:bg-[#58493D]/30 cursor-pointer' : 'text-[#58493D] cursor-not-allowed opacity-50'
           }`}
-          title="Etapa 2: Auditoria, Rastreabilidade e Validação"
+          title="Etapa: Auditoria, Rastreabilidade e Validação"
         >
           <span>Auditoria & Conferência</span>
         </button>
@@ -74,14 +74,31 @@ export default function Navbar({
             if (hasDoc && onSync) onSync();
           }}
           disabled={!hasDoc}
-          className={`px-3 py-1 rounded-md transition-all flex items-center gap-1.5 ${
+          className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
             fase === 'sincronizado' 
               ? 'bg-[#D5A474] text-[#2D251B] font-semibold shadow-sm' 
               : hasDoc ? 'text-[#97918D] hover:text-[#FFFEFD] hover:bg-[#58493D]/30 cursor-pointer' : 'text-[#58493D] cursor-not-allowed opacity-50'
           }`}
-          title="Etapa 3: Sincronização e Envio ao ERP"
+          title="Etapa: Sincronização e Envio ao ERP"
         >
           <span>Sincronização ERP</span>
+        </button>
+
+        <ArrowRight className="w-3.5 h-3.5 text-[#48403A]" />
+
+        <button 
+          type="button"
+          onClick={() => {
+            if (setFase) setFase('studio');
+          }}
+          className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+            fase === 'studio' 
+              ? 'bg-[#D5A474] text-[#2D251B] font-bold border border-[#D5A474] shadow-sm' 
+              : 'text-[#97918D] hover:text-[#FFFEFD] hover:bg-[#58493D]/30'
+          }`}
+          title="Ambiente de Calibração, Treinamento e Engenharia de Prompt (Few-Shot Studio)"
+        >
+          <span>Estúdio de IA</span>
         </button>
       </nav>
 
