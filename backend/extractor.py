@@ -9,7 +9,7 @@ import re
 import json
 import uuid
 import unicodedata
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Tuple
 from prompts import prompt_kai_extract, few_shot_examples
 from normalizer import ERPNormalizer
 
@@ -20,13 +20,22 @@ class KaiExtractorCore:
         self.prompt = prompt_kai_extract
         self.examples = few_shot_examples
 
-    def extract_document(self, text_or_filepath: str, user_hint: Optional[str] = None, output_dir: str = "./outputs") -> Dict[str, Any]:
+    def extract_document(
+        self,
+        text_or_filepath: str,
+        user_hint: Optional[str] = None,
+        output_dir: str = "./outputs",
+        chunk_size: int = 5000,
+        overlap: int = 800
+    ) -> Dict[str, Any]:
         """
-        Main extraction entry point.
+        Main extraction entry point with Intelligent Chunking & Global Grounding Offset Remapping.
         1. Reads raw text or file.
-        2. Performs extraction with source grounding spans (optionally guided by user_hint).
-        3. Generates the interactive HTML visualization.
-        4. Returns normalized Multi-ERP payload.
+        2. Applies intelligent chunking with natural boundary detection and overlap.
+        3. Performs extraction per chunk, remaps local spans to global character offsets in raw_text.
+        4. Consolidates multi-chunk attributes and deduplicates overlapping spans.
+        5. Generates the interactive HTML visualization & JSONL output.
+        6. Returns normalized Multi-ERP payload.
         """
         os.makedirs(output_dir, exist_ok=True)
         
@@ -41,11 +50,14 @@ class KaiExtractorCore:
             file_name = f"doc_{uuid.uuid4().hex[:8]}"
 
         doc_id = file_name
-        extracted_raw_attributes = self._perform_extraction(raw_text, user_hint=user_hint)
-        normalized_data = ERPNormalizer.normalize_extracted_data(extracted_raw_attributes)
         
-        # Build highlights and grounding spans
-        spans = self._locate_grounding_spans(raw_text, normalized_data)
+        # Process document (with Intelligent Chunking & Global Grounding Offset Remapping)
+        normalized_data, spans = self._process_document_with_chunking(
+            raw_text,
+            user_hint=user_hint,
+            chunk_size=chunk_size,
+            overlap=overlap
+        )
         
         # Generate JSONL
         jsonl_path = os.path.join(output_dir, f"{doc_id}_extracted.jsonl")
@@ -56,7 +68,7 @@ class KaiExtractorCore:
             "extractions": [
                 {
                     "class": "despesa_condominial",
-                    "text": normalized_data["valor_total"],
+                    "text": normalized_data.get("valor_total", ""),
                     "attributes": normalized_data,
                     "spans": spans
                 }
@@ -84,6 +96,240 @@ class KaiExtractorCore:
             "superlogica": ERPNormalizer.to_superlogica_format(normalized_data),
             "condominia": ERPNormalizer.to_condominia_format(normalized_data)
         }
+
+    def _create_intelligent_chunks(self, text: str, chunk_size: int = 5000, overlap: int = 800) -> List[Tuple[int, int, str]]:
+        """
+        Intelligently splits large text into overlapping chunks using natural boundaries
+        (page breaks, double newlines, sentence/line breaks) to avoid cutting words or entities.
+        
+        Returns:
+            List of (start_offset, end_offset, chunk_text)
+        """
+        total_len = len(text)
+        if total_len <= chunk_size:
+            return [(0, total_len, text)]
+
+        chunks = []
+        start_offset = 0
+
+        while start_offset < total_len:
+            target_end = min(start_offset + chunk_size, total_len)
+
+            if target_end == total_len:
+                chunks.append((start_offset, total_len, text[start_offset:total_len]))
+                break
+
+            # Find best natural break boundary looking backwards from target_end
+            search_window = text[max(start_offset, target_end - 400):target_end]
+            break_offset = -1
+
+            # 1. Page breaks: \x0c or \f or ==Start of Page / ==Start of OCR
+            for marker in ["\x0c", "\f", "\n==Start of", "\n--- PAGE", "\n--- PÁGINA"]:
+                pos = search_window.rfind(marker)
+                if pos != -1:
+                    break_offset = max(start_offset, target_end - 400) + pos + len(marker)
+                    break
+
+            # 2. Paragraph breaks: \n\n
+            if break_offset == -1:
+                pos = search_window.rfind("\n\n")
+                if pos != -1:
+                    break_offset = max(start_offset, target_end - 400) + pos + 2
+
+            # 3. Line breaks: \n
+            if break_offset == -1:
+                pos = search_window.rfind("\n")
+                if pos != -1:
+                    break_offset = max(start_offset, target_end - 400) + pos + 1
+
+            # 4. Sentence boundary: . / ; / :
+            if break_offset == -1:
+                for punct in [". ", "; ", ": "]:
+                    pos = search_window.rfind(punct)
+                    if pos != -1:
+                        break_offset = max(start_offset, target_end - 400) + pos + len(punct)
+                        break
+
+            # Fallback to whitespace or hard target_end
+            if break_offset == -1:
+                pos = search_window.rfind(" ")
+                if pos != -1:
+                    break_offset = max(start_offset, target_end - 400) + pos + 1
+                else:
+                    break_offset = target_end
+
+            actual_end = max(start_offset + 100, break_offset)
+            chunks.append((start_offset, actual_end, text[start_offset:actual_end]))
+
+            if actual_end >= total_len:
+                break
+
+            # Calculate next start offset by stepping back the overlap amount
+            candidate_start = max(start_offset + 1, actual_end - overlap)
+            
+            # Refine next start to a clean line break if possible
+            forward_window = text[candidate_start:min(candidate_start + 200, actual_end)]
+            nl_pos = forward_window.find("\n")
+            if nl_pos != -1 and (candidate_start + nl_pos + 1) < actual_end:
+                candidate_start = candidate_start + nl_pos + 1
+
+            start_offset = candidate_start
+
+        return chunks
+
+    def _deduplicate_spans(self, spans: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Deduplicates spans originating from chunk overlap zones.
+        Ensures exact global coordinates and preserves highest-completeness spans.
+        """
+        if not spans:
+            return []
+
+        sorted_spans = sorted(spans, key=lambda s: (s["start"], s["end"]))
+        deduplicated = []
+
+        for s in sorted_spans:
+            if not deduplicated:
+                deduplicated.append(s)
+                continue
+
+            last = deduplicated[-1]
+            
+            # Check for overlapping character intervals
+            has_overlap = (s["start"] < last["end"] and s["end"] > last["start"])
+            is_same_field = s["field"] == last["field"]
+
+            if has_overlap and is_same_field:
+                # Same field in overlap zone: keep the one with longer / higher fidelity matched_text
+                if len(s.get("matched_text", "")) > len(last.get("matched_text", "")):
+                    deduplicated[-1] = s
+            elif has_overlap and not is_same_field:
+                # Overlapping interval between different fields: keep the longer matched span
+                if len(s.get("matched_text", "")) > len(last.get("matched_text", "")):
+                    deduplicated[-1] = s
+            elif is_same_field and s.get("matched_text") == last.get("matched_text"):
+                # Exact duplicate value of the same field: keep the first occurrence
+                continue
+            else:
+                deduplicated.append(s)
+
+        return sorted(deduplicated, key=lambda s: s["start"])
+
+    def _consolidate_extracted_data(self, chunk_extractions: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Consolidates extracted dictionary attributes across all chunks.
+        Picks the most complete and valid attributes.
+        """
+        consolidated = {}
+        for ext in chunk_extractions:
+            for k, v in ext.items():
+                if not v or not str(v).strip():
+                    continue
+                v_str = str(v).strip()
+                if k not in consolidated or not consolidated[k]:
+                    consolidated[k] = v_str
+                else:
+                    curr_str = str(consolidated[k]).strip()
+                    # Quality priority rules
+                    if len(v_str) > len(curr_str) and curr_str in v_str:
+                        consolidated[k] = v_str
+                    elif k in ["valor_total", "valor_original"]:
+                        try:
+                            v_float = float(re.sub(r"[^\d,]", "", v_str).replace(",", "."))
+                            curr_float = float(re.sub(r"[^\d,]", "", curr_str).replace(",", "."))
+                            if v_float > curr_float:
+                                consolidated[k] = v_str
+                        except Exception:
+                            if curr_str in ["0,00", "0.00", "0"]:
+                                consolidated[k] = v_str
+                    elif k == "data_vencimento" and v_str > curr_str:
+                        consolidated[k] = v_str
+                    elif k == "data_emissao" and (not curr_str or v_str < curr_str):
+                        consolidated[k] = v_str
+                    elif k == "linha_digitavel" and len(re.sub(r"\D", "", v_str)) > len(re.sub(r"\D", "", curr_str)):
+                        consolidated[k] = v_str
+                    elif k == "chave_acesso" and len(re.sub(r"\D", "", v_str)) == 44:
+                        consolidated[k] = v_str
+                    elif k == "chave_pix" and len(v_str) > len(curr_str):
+                        consolidated[k] = v_str
+        return consolidated
+
+    def _process_document_with_chunking(
+        self,
+        raw_text: str,
+        user_hint: Optional[str] = None,
+        chunk_size: int = 5000,
+        overlap: int = 800
+    ) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+        """
+        Executes Intelligent Chunking with Overlap and Global Coordinate Remapping (Global Grounding Offset).
+        """
+        # If document fits within single chunk, process directly
+        if len(raw_text) <= chunk_size:
+            extracted_raw = self._perform_extraction(raw_text, user_hint=user_hint)
+            normalized = ERPNormalizer.normalize_extracted_data(extracted_raw)
+            spans = self._locate_grounding_spans(raw_text, normalized)
+            return normalized, spans
+
+        # Multi-page / Long document chunking
+        chunks = self._create_intelligent_chunks(raw_text, chunk_size=chunk_size, overlap=overlap)
+        chunk_extractions = []
+        all_global_spans = []
+
+        for chunk_idx, (start_offset, end_offset, chunk_text) in enumerate(chunks):
+            # 1. Extract on isolated chunk
+            chunk_raw_extracted = self._perform_extraction(chunk_text, user_hint=user_hint)
+            chunk_normalized = ERPNormalizer.normalize_extracted_data(chunk_raw_extracted)
+            chunk_extractions.append(chunk_normalized)
+
+            # 2. Locate local grounding spans for this chunk
+            local_spans = self._locate_grounding_spans(chunk_text, chunk_normalized)
+
+            # 3. CRITICAL GLOBAL COORDINATE REMAPPING (Global Grounding Offset)
+            for span in local_spans:
+                local_start = span["start"]
+                local_end = span["end"]
+                global_start = local_start + start_offset
+                global_end = local_end + start_offset
+
+                # Verify against raw_text to guarantee 100% boundary fidelity
+                matched_text = span["matched_text"]
+                if raw_text[global_start:global_end] != matched_text:
+                    nearby_idx = raw_text.find(
+                        matched_text,
+                        max(0, global_start - 60),
+                        min(len(raw_text), global_end + 60)
+                    )
+                    if nearby_idx != -1:
+                        global_start = nearby_idx
+                        global_end = nearby_idx + len(matched_text)
+
+                adjusted_span = dict(span)
+                adjusted_span["start"] = global_start
+                adjusted_span["end"] = global_end
+                adjusted_span["chunk_index"] = chunk_idx
+                all_global_spans.append(adjusted_span)
+
+        # 4. CONSOLIDATION ACROSS CHUNKS
+        consolidated_raw = self._consolidate_extracted_data(chunk_extractions)
+        consolidated_normalized = ERPNormalizer.normalize_extracted_data(consolidated_raw)
+
+        # 5. DEDUPLICATION OF GROUNDING SPANS (Overlap Zones)
+        deduplicated_spans = self._deduplicate_spans(all_global_spans)
+
+        # Ensure all consolidated fields have matching grounding spans if possible
+        existing_span_fields = set(s["field"] for s in deduplicated_spans)
+        missing_fields_data = {
+            k: v for k, v in consolidated_normalized.items()
+            if k not in existing_span_fields and v
+        }
+        if missing_fields_data:
+            additional_spans = self._locate_grounding_spans(raw_text, missing_fields_data)
+            all_spans = self._deduplicate_spans(deduplicated_spans + additional_spans)
+        else:
+            all_spans = deduplicated_spans
+
+        return consolidated_normalized, all_spans
 
     def _perform_extraction(self, text: str, user_hint: Optional[str] = None) -> Dict[str, Any]:
         """
@@ -171,26 +417,28 @@ class KaiExtractorCore:
         # 2. Fornecedor / Beneficiário (Credor / Emissor)
         forn_nome = ""
         for line in lines:
-            if any(h in line.lower() for h in ["agência", "beneficiário cnpj/cpf -", "número documento", "recibo do pagador"]):
+            if any(h in line.lower() for h in ["agência", "beneficiário cnpj/cpf -", "número documento", "recibo do pagador", "danfe -", "documento auxiliar"]):
                 continue
-            if any(term in line.lower() for term in ["secovi", "cpfl", "sabesp", "guardian", "schindler", "receita federal", "s.a.", "ltda", "sind emp", "sindicato"]):
+            if any(term in line.lower() for term in ["secovi", "cpfl", "sabesp", "guardian", "schindler", "receita federal", "s.a.", "ltda", "sind emp", "sindicato", "companhia"]):
                 cand = line.split(" CNPJ")[0].split(" - Beneficiário")[0].split(" -")[0].strip()
                 cand = re.sub(r"\s+\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2}.*$", "", cand).strip()
-                forn_nome = cand
-                break
+                if len(cand) >= 3 and cand.lower() not in ["danfe", "nota fiscal"]:
+                    forn_nome = cand
+                    break
 
         if not forn_nome:
             benef_m = re.search(r"(?:Benefici[aá]rio|Cedente)[:\s]*(?:CNPJ\/CPF[^\n]*\n)?([A-Z0-9\.\-\s]{3,60})(?=(?:\d{2}\.\d{3}\.\d{3}|\d{14}|\n|\-|\|))", text, re.IGNORECASE)
             if benef_m:
                 cand = benef_m.group(1).strip()
-                if not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód"]):
+                if not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód", "danfe"]):
                     forn_nome = cand
         
         if not forn_nome and lines:
             for l in lines:
-                if not any(h in l.lower() for h in ["agência", "cód", "número", "recibo"]):
+                if not any(h in l.lower() for h in ["agência", "cód", "número", "recibo", "danfe", "nota fiscal", "dados do destinatário"]):
                     forn_nome = l.split(" - ")[0].split(" | ")[0].strip()
-                    break
+                    if forn_nome.lower() not in ["danfe", "nota fiscal"]:
+                        break
 
         extracted["fornecedor_nome"] = forn_nome or "Fornecedor Identificado"
 
