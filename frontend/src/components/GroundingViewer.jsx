@@ -593,7 +593,7 @@ export default function GroundingViewer({
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>Grounding</span>
+              <span>Destaques</span>
             </button>
             <button
               type="button"

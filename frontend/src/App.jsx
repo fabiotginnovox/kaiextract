@@ -198,8 +198,18 @@ export default function App() {
 
       setFase('validacao');
     } catch (err) {
+      if (isTxt) {
+        try {
+          const textContent = await file.text();
+          console.warn("Backend indisponível para arquivo .txt, usando motor client-side.");
+          simulateLocalExtraction(textContent);
+          return;
+        } catch (readErr) {
+          console.warn("Falha ao ler arquivo localmente:", readErr);
+        }
+      }
       console.warn("Erro ao processar arquivo:", err);
-      setErrorMsg(err.message || "Erro ao processar o arquivo.");
+      setErrorMsg(err.message || "Erro ao processar o arquivo. Verifique se o backend está ativo.");
       setFase('upload');
     }
   };

@@ -38,8 +38,7 @@ export default function Navbar({
           }`}
           title="Etapa 1: Carregar Fatura / Selecionar TXT de Exemplo"
         >
-          <span className="font-mono text-[10px] opacity-70">01</span>
-          <span>Fatura (.TXT)</span>
+          <span>Enviar Fatura</span>
         </button>
         
         <ArrowRight className="w-3.5 h-3.5 text-[#48403A]" />
@@ -57,8 +56,7 @@ export default function Navbar({
           }`}
           title="Etapa 2: Auditoria, Rastreabilidade e Validação"
         >
-          <span className="font-mono text-[10px] opacity-70">02</span>
-          <span>Auditoria & Grounding</span>
+          <span>Auditoria & Conferência</span>
         </button>
         
         <ArrowRight className="w-3.5 h-3.5 text-[#48403A]" />
@@ -76,7 +74,6 @@ export default function Navbar({
           }`}
           title="Etapa 3: Sincronização e Envio ao ERP"
         >
-          <span className="font-mono text-[10px]">03</span>
           <span>Sincronização ERP</span>
         </button>
       </nav>
