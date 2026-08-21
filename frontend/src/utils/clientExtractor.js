@@ -1,4 +1,99 @@
 import { findOcrFuzzyMatch, buildGroundingHtml } from '../components/GroundingViewer';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Configure worker for pdfjs-dist
+if (typeof window !== 'undefined' && pdfjsLib?.GlobalWorkerOptions) {
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.mjs`;
+  } catch (e) {
+    console.warn("Could not set PDF workerSrc:", e);
+  }
+}
+
+/**
+ * Extracts native text layer from editable PDF files on client-side
+ */
+export async function extractTextFromPdf(fileOrBuffer) {
+  // 1. Primary Engine: PDF.js
+  try {
+    const arrayBuffer = fileOrBuffer instanceof ArrayBuffer 
+      ? fileOrBuffer 
+      : await fileOrBuffer.arrayBuffer();
+
+    const loadingTask = pdfjsLib.getDocument({ 
+      data: new Uint8Array(arrayBuffer),
+      useSystemFonts: true,
+      disableFontFace: true
+    });
+    const pdf = await loadingTask.promise;
+    let fullText = '';
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+      
+      let lastY = null;
+      let pageText = '';
+      for (const item of textContent.items) {
+        if ('str' in item) {
+          const currentY = item.transform ? item.transform[5] : 0;
+          if (lastY !== null && Math.abs(currentY - lastY) > 6) {
+            pageText += '\n';
+          } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
+            pageText += ' ';
+          }
+          pageText += item.str;
+          lastY = currentY;
+        }
+      }
+      if (pageText.trim()) {
+        fullText += (fullText ? '\n\n' : '') + pageText.trim();
+      }
+    }
+
+    const cleaned = fullText.trim();
+    if (cleaned.length >= 20) {
+      return cleaned;
+    }
+  } catch (err) {
+    console.warn("PDF.js text extraction error, trying fallback stream parser:", err);
+  }
+
+  // 2. Secondary Engine: Native PDF character stream parser for editable PDFs
+  try {
+    const arrayBuffer = fileOrBuffer instanceof ArrayBuffer 
+      ? fileOrBuffer 
+      : await fileOrBuffer.arrayBuffer();
+    const decoder = new TextDecoder('latin1');
+    const raw = decoder.decode(new Uint8Array(arrayBuffer));
+    
+    const textSegments = [];
+    const tjRegex = /\(([^()]{2,})\)\s*Tj/g;
+    let match;
+    while ((match = tjRegex.exec(raw)) !== null) {
+      textSegments.push(match[1]);
+    }
+
+    if (textSegments.length === 0) {
+      const tjArrayRegex = /\[(.*?)\]\s*TJ/g;
+      while ((match = tjArrayRegex.exec(raw)) !== null) {
+        const innerMatches = match[1].match(/\(([^()]+)\)/g) || [];
+        innerMatches.forEach(m => textSegments.push(m.slice(1, -1)));
+      }
+    }
+
+    if (textSegments.length > 0) {
+      const combined = textSegments.join(' ').replace(/\\(\d{3})/g, (_, oct) => String.fromCharCode(parseInt(oct, 8)));
+      if (combined.trim().length >= 20) {
+        return combined.trim();
+      }
+    }
+  } catch (rawErr) {
+    console.warn("Fallback stream parser also failed:", rawErr);
+  }
+
+  throw new Error("Não foi possível extrair o texto deste PDF. Certifique-se de que é um PDF editável (com camada de texto nativa) e não uma imagem escaneada.");
+}
 
 /**
  * Universal Client-Side Fallback Extractor

@@ -6,7 +6,7 @@ import ExtractionForm from './components/ExtractionForm';
 import PdfViewer from './components/PdfViewer';
 import SuccessModal from './components/SuccessModal';
 import AuditModal from './components/AuditModal';
-import { extractDocumentClientSide, normalizeSelectedValue } from './utils/clientExtractor';
+import { extractDocumentClientSide, extractTextFromPdf, normalizeSelectedValue } from './utils/clientExtractor';
 import { Loader2, AlertCircle } from 'lucide-react';
 
 export default function App() {
@@ -198,18 +198,41 @@ export default function App() {
 
       setFase('validacao');
     } catch (err) {
+      console.warn("API de extração indisponível ou offline. Executando extração client-side:", err);
+      
+      if (isPdf) {
+        try {
+          const pdfText = await extractTextFromPdf(file);
+          const pdfBlobUrl = URL.createObjectURL(file);
+          simulateLocalExtraction(pdfText, {
+            fileType: 'pdf',
+            pdfUrl: pdfBlobUrl,
+            docId: (file.name || 'fatura').replace(/\.pdf$/i, '')
+          });
+          return;
+        } catch (pdfErr) {
+          console.warn("Falha na extração de texto do PDF:", pdfErr);
+          setErrorMsg(pdfErr.message || "Erro ao ler o arquivo PDF. Certifique-se de que é um PDF editável.");
+          setFase('upload');
+          return;
+        }
+      }
+
       if (isTxt) {
         try {
           const textContent = await file.text();
-          console.warn("Backend indisponível para arquivo .txt, usando motor client-side.");
-          simulateLocalExtraction(textContent);
+          simulateLocalExtraction(textContent, {
+            fileType: 'txt',
+            pdfUrl: null,
+            docId: (file.name || 'fatura').replace(/\.txt$/i, '')
+          });
           return;
         } catch (readErr) {
           console.warn("Falha ao ler arquivo localmente:", readErr);
         }
       }
-      console.warn("Erro ao processar arquivo:", err);
-      setErrorMsg(err.message || "Erro ao processar o arquivo. Verifique se o backend está ativo.");
+
+      setErrorMsg(err.message || "Erro ao processar o arquivo.");
       setFase('upload');
     }
   };
@@ -226,13 +249,15 @@ export default function App() {
     return '';
   };
 
-  const simulateLocalExtraction = (text) => {
+  const simulateLocalExtraction = (text, options = {}) => {
     setTimeout(() => {
       const extracted = extractDocumentClientSide(text);
       setCurrentDoc({
         ...extracted,
-        fileType: 'txt',
-        pdfUrl: null
+        fileType: options.fileType || 'txt',
+        pdfUrl: options.pdfUrl || null,
+        docId: options.docId || extracted.docId || 'doc_local',
+        rawText: text
       });
       setFase('validacao');
     }, 600);
@@ -271,7 +296,10 @@ export default function App() {
     } catch (err) {
       console.warn("API de re-extração offline, executando motor client-side com feedback:", err);
       const extracted = extractDocumentClientSide(currentDoc.rawText, userHint);
-      setCurrentDoc(extracted);
+      setCurrentDoc(prev => ({
+        ...prev,
+        ...extracted
+      }));
     } finally {
       setIsReExtracting(false);
     }
