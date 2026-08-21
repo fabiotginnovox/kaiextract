@@ -1,12 +1,13 @@
 import { findOcrFuzzyMatch, buildGroundingHtml } from '../components/GroundingViewer';
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 
-// Configure worker for pdfjs-dist
+// Configure bundled worker for pdfjs-dist
 if (typeof window !== 'undefined' && pdfjsLib?.GlobalWorkerOptions) {
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version || '4.0.379'}/pdf.worker.min.mjs`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
   } catch (e) {
-    console.warn("Could not set PDF workerSrc:", e);
+    console.warn("Could not set PDF worker URL:", e);
   }
 }
 
@@ -14,7 +15,7 @@ if (typeof window !== 'undefined' && pdfjsLib?.GlobalWorkerOptions) {
  * Extracts native text layer from editable PDF files on client-side
  */
 export async function extractTextFromPdf(fileOrBuffer) {
-  // 1. Primary Engine: PDF.js
+  // 1. Primary Engine: PDF.js with local bundled worker
   try {
     const arrayBuffer = fileOrBuffer instanceof ArrayBuffer 
       ? fileOrBuffer 
@@ -23,7 +24,8 @@ export async function extractTextFromPdf(fileOrBuffer) {
     const loadingTask = pdfjsLib.getDocument({ 
       data: new Uint8Array(arrayBuffer),
       useSystemFonts: true,
-      disableFontFace: true
+      disableFontFace: true,
+      isEvalSupported: false
     });
     const pdf = await loadingTask.promise;
     let fullText = '';
@@ -32,19 +34,24 @@ export async function extractTextFromPdf(fileOrBuffer) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
       
+      const items = (textContent.items || []).filter(i => 'str' in i);
+      items.sort((a, b) => {
+        const yDiff = (b.transform ? b.transform[5] : 0) - (a.transform ? a.transform[5] : 0);
+        if (Math.abs(yDiff) > 4) return yDiff;
+        return (a.transform ? a.transform[4] : 0) - (b.transform ? b.transform[4] : 0);
+      });
+
       let lastY = null;
       let pageText = '';
-      for (const item of textContent.items) {
-        if ('str' in item) {
-          const currentY = item.transform ? item.transform[5] : 0;
-          if (lastY !== null && Math.abs(currentY - lastY) > 6) {
-            pageText += '\n';
-          } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
-            pageText += ' ';
-          }
-          pageText += item.str;
-          lastY = currentY;
+      for (const item of items) {
+        const currentY = item.transform ? item.transform[5] : 0;
+        if (lastY !== null && Math.abs(currentY - lastY) > 4) {
+          pageText += '\n';
+        } else if (pageText.length > 0 && !pageText.endsWith(' ') && !pageText.endsWith('\n')) {
+          pageText += ' ';
         }
+        pageText += item.str;
+        lastY = currentY;
       }
       if (pageText.trim()) {
         fullText += (fullText ? '\n\n' : '') + pageText.trim();
@@ -56,7 +63,7 @@ export async function extractTextFromPdf(fileOrBuffer) {
       return cleaned;
     }
   } catch (err) {
-    console.warn("PDF.js text extraction error, trying fallback stream parser:", err);
+    console.warn("PDF.js text extraction error:", err);
   }
 
   // 2. Secondary Engine: Native PDF character stream parser for editable PDFs
