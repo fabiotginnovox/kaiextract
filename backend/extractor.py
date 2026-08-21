@@ -352,15 +352,34 @@ class KaiExtractorCore:
             if forn_hint_m:
                 hint_forn = forn_hint_m.group(1).strip().strip('"\'')
 
+        def _is_valid_entity_name(name: str) -> bool:
+            if not name or len(name.strip()) < 3:
+                return False
+            n = name.strip()
+            if len(n) > 120:
+                return False
+            words = n.split()
+            if len(words) > 15:
+                return False
+            unique_alpha = set(c.upper() for c in n if c.isalpha())
+            if len(unique_alpha) <= 2 and len(n) > 8:
+                return False
+            if len(words) > 2 and all(len(w) == 1 for w in words):
+                return False
+            if any(junk in n.lower() for junk in ["linha digitavel", "linha digitável", "codigo de barras", "código de barras", "autenticação", "beneficiário cnpj/cpf", "data emissão"]):
+                return False
+            return True
+
         # 0.5 Pre-extract Linha Digitável to establish physical isolation boundaries
-        linha_m = re.search(r"(?:Linha Digitável|Código de Barras|Código de Pagamento|Linha)[:\s]*([\d\s\.\-]{30,60})", text, re.IGNORECASE)
+        barcode_pat = r"(?:Linha\s+Digit[aá]vel(?:\s+do\s+boleto)?|C[oó]digo\s+de\s+Barras|C[oó]d\.?\s*Barras|Linha)[:\s]*([\d\s\.\-]{20,80})"
+        linha_m = re.search(barcode_pat, text, re.IGNORECASE)
         barcode_str = ""
         barcode_span = None
         if linha_m:
             barcode_str = linha_m.group(1).strip()
             barcode_span = (linha_m.start(1), linha_m.end(1))
         else:
-            seq_m = re.search(r"(\d{5}[\.\s]?\d{5}[\.\s]?\d{5}[\.\s]?\d{6}[\.\s]?\d{1}[\.\s]?\d{14}|\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1})", text)
+            seq_m = re.search(r"(\d{5}[\.\s]?\d{5}[\.\s]?\d{5}[\.\s]?\d{6}[\.\s]?\d{1}[\.\s]?\d{11,15}|\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1})", text)
             if seq_m:
                 barcode_str = seq_m.group(0).strip()
                 barcode_span = (seq_m.start(0), seq_m.end(0))
@@ -380,7 +399,7 @@ class KaiExtractorCore:
             client_block_m = re.search(r"NOME\s+DO\s+CLIENTE[:\s]*\n\s*([^\n\r]+)", text, re.IGNORECASE)
             if client_block_m:
                 cand = client_block_m.group(1).strip()
-                if len(cand) >= 3 and not any(h in cand.lower() for h in ["cnpj", "cpf", "nota fiscal", "endereço", "ref"]):
+                if _is_valid_entity_name(cand) and not any(h in cand.lower() for h in ["cnpj", "cpf", "nota fiscal", "endereço", "ref"]):
                     condo_nome = cand
 
         if not condo_nome:
@@ -393,7 +412,7 @@ class KaiExtractorCore:
                     val = re.sub(r"^(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s\/]*", "", val, flags=re.IGNORECASE).strip()
                     val = re.sub(r"\s+(?:MENSAL|VALOR|ASSOC|TAXA|R\s*DOM).*$", "", val, flags=re.IGNORECASE).strip()
                     val = re.sub(r"^\d{3,5}\s+", "", val).strip() # strip customer code prefix like 00226
-                    if len(val) >= 3 and not any(h in val.lower() for h in ["data emissão", "nosso nº", "formulário", "beneficiário", "cód.", "nota fiscal", "serie 000"]):
+                    if _is_valid_entity_name(val) and not any(h in val.lower() for h in ["data emissão", "nosso nº", "formulário", "beneficiário", "cód.", "nota fiscal", "serie 000"]):
                         condo_nome = val
                         break
                     
@@ -401,7 +420,7 @@ class KaiExtractorCore:
             m2 = re.search(r"\b(?:CONDOMINIO|Condom[ií]nio|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)[\s\w\.\-]+?(?=(?:-|–|CNPJ|\n|,|MENSAL|VALOR|NOTA))", text, re.IGNORECASE)
             if m2:
                 cand = m2.group(0).strip()
-                if not any(h in cand.lower() for h in ["beneficiário", "sind", "secovi", "nota fiscal", "serie", "emissão", "vencimento"]):
+                if _is_valid_entity_name(cand) and not any(h in cand.lower() for h in ["beneficiário", "sind", "secovi", "nota fiscal", "serie", "emissão", "vencimento"]):
                     condo_nome = cand
             if not condo_nome:
                 condo_nome = "EDIFICIO AVIS LIBERTAS" if "AVIS LIBERTA" in text else ""
@@ -442,7 +461,7 @@ class KaiExtractorCore:
             if any(term in line.lower() for term in ["secovi", "cpfl", "sabesp", "guardian", "schindler", "receita federal", "s.a.", "ltda", "sind emp", "sindicato", "companhia"]):
                 cand = line.split(" CNPJ")[0].split(" - Beneficiário")[0].split(" -")[0].strip()
                 cand = re.sub(r"\s+\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2}.*$", "", cand).strip()
-                if len(cand) >= 3 and cand.lower() not in ["danfe", "nota fiscal"]:
+                if _is_valid_entity_name(cand) and cand.lower() not in ["danfe", "nota fiscal"]:
                     forn_nome = cand
                     break
 
@@ -450,17 +469,18 @@ class KaiExtractorCore:
             benef_m = re.search(r"(?:Benefici[aá]rio|Cedente)[:\s]*(?:CNPJ\/CPF[^\n]*\n)?([A-Z0-9\.\-\s]{3,60})(?=(?:\d{2}\.\d{3}\.\d{3}|\d{14}|\n|\-|\|))", text, re.IGNORECASE)
             if benef_m:
                 cand = benef_m.group(1).strip()
-                if not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód", "danfe", "linha"]):
+                if _is_valid_entity_name(cand) and not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód", "danfe", "linha"]):
                     forn_nome = cand
         
         if not forn_nome and lines:
             for l in lines:
                 if not any(h in l.lower() for h in ["agência", "cód", "número", "recibo", "danfe", "nota fiscal", "dados do destinatário", "linha digitável"]):
-                    forn_nome = l.split(" - ")[0].split(" | ")[0].strip()
-                    if forn_nome.lower() not in ["danfe", "nota fiscal"]:
+                    cand = l.split(" - ")[0].split(" | ")[0].strip()
+                    if _is_valid_entity_name(cand) and cand.lower() not in ["danfe", "nota fiscal"]:
+                        forn_nome = cand
                         break
 
-        extracted["fornecedor_nome"] = forn_nome or "Fornecedor Identificado"
+        extracted["fornecedor_nome"] = forn_nome or ""
 
         # Supplier CNPJ (Ensure not matching numbers inside barcode)
         supp_cnpj_m = re.search(r"(?:SECOVI|COMPANHIA|GUARDIAN|ELEVADORES|SABESP|Benefici[aá]rio|Cedente)[^\n]*?(?:CNPJ|CPF)?[:\s]*(\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2})", text)
@@ -659,18 +679,6 @@ class KaiExtractorCore:
         # Local de Pagamento
         loc_m = re.search(r"Local do Pagamento[:\s]*([^\n\r]+)", text, re.IGNORECASE)
         extracted["local_pagamento"] = loc_m.group(1).strip() if loc_m else "Rede Bancária / Internet Banking"
-
-        # Linha Digitável
-        linha_m = re.search(r"(?:Linha Digitável|Código de Barras|Código de Pagamento|Linha)[:\s]*([\d\s\.\-]{30,60})", text, re.IGNORECASE)
-        if linha_m:
-            extracted["linha_digitavel"] = linha_m.group(1).strip()
-        else:
-            seq_m = re.search(r"(\d{5}[\.\s]?\d{5}[\.\s]?\d{5}[\.\s]?\d{6}[\.\s]?\d{1}[\.\s]?\d{14}|\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1})", text)
-            if seq_m:
-                extracted["linha_digitavel"] = seq_m.group(0).strip()
-            else:
-                banco_linha = re.search(r"(?:3419|2379|0019|1049|0339)[\w\.\s]{35,60}", text)
-                extracted["linha_digitavel"] = banco_linha.group(0).split("\n")[0].strip() if banco_linha else ""
 
         # Informações Técnicas e Concessionárias (Leituras, Medidor, Próxima Leitura)
         prox_m = re.search(r"(?:Pr[óo]xima\s+Leitura|Pr[oó]x\.?\s*Leitura)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
@@ -942,6 +950,10 @@ class KaiExtractorCore:
 
         for field_name, value, color, label in targets:
             if not value or len(str(value)) < 2:
+                continue
+            
+            # Avoid matching random 0.00 inside barcodes or account numbers when no explicit discount exists
+            if field_name in ["valor_desconto", "valor_acrescimo"] and str(value).strip() in ["0,00", "0.00", "0"]:
                 continue
             
             match_str = str(value)
