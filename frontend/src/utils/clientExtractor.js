@@ -1,21 +1,17 @@
 import { findOcrFuzzyMatch, buildGroundingHtml } from '../components/GroundingViewer';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.mjs?url';
 
-// Configure bundled worker for pdfjs-dist
+// Configure universal in-thread FakeWorker for pdfjs-dist
+// Avoids Safari/WebKit WebWorker security restrictions and cross-origin worker errors on GitHub Pages
 if (typeof window !== 'undefined' && pdfjsLib?.GlobalWorkerOptions) {
-  try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
-  } catch (e) {
-    console.warn("Could not set PDF worker URL:", e);
-  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '';
 }
 
 /**
  * Extracts native text layer from editable PDF files on client-side
  */
 export async function extractTextFromPdf(fileOrBuffer) {
-  // 1. Primary Engine: PDF.js with local bundled worker
+  // 1. Primary Engine: PDF.js (In-Thread Universal Engine)
   try {
     const arrayBuffer = fileOrBuffer instanceof ArrayBuffer 
       ? fileOrBuffer 
@@ -25,7 +21,8 @@ export async function extractTextFromPdf(fileOrBuffer) {
       data: new Uint8Array(arrayBuffer),
       useSystemFonts: true,
       disableFontFace: true,
-      isEvalSupported: false
+      isEvalSupported: false,
+      stopAtErrors: false
     });
     const pdf = await loadingTask.promise;
     let fullText = '';
