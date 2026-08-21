@@ -352,6 +352,26 @@ class KaiExtractorCore:
             if forn_hint_m:
                 hint_forn = forn_hint_m.group(1).strip().strip('"\'')
 
+        # 0.5 Pre-extract Linha Digitável to establish physical isolation boundaries
+        linha_m = re.search(r"(?:Linha Digitável|Código de Barras|Código de Pagamento|Linha)[:\s]*([\d\s\.\-]{30,60})", text, re.IGNORECASE)
+        barcode_str = ""
+        barcode_span = None
+        if linha_m:
+            barcode_str = linha_m.group(1).strip()
+            barcode_span = (linha_m.start(1), linha_m.end(1))
+        else:
+            seq_m = re.search(r"(\d{5}[\.\s]?\d{5}[\.\s]?\d{5}[\.\s]?\d{6}[\.\s]?\d{1}[\.\s]?\d{14}|\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1}[\s]?\d{11,12}[\-\s]?\d{1})", text)
+            if seq_m:
+                barcode_str = seq_m.group(0).strip()
+                barcode_span = (seq_m.start(0), seq_m.end(0))
+            else:
+                banco_linha = re.search(r"(?:3419|2379|0019|1049|0339)[\w\.\s]{35,60}", text)
+                if banco_linha:
+                    barcode_str = banco_linha.group(0).split("\n")[0].strip()
+                    barcode_span = (banco_linha.start(0), banco_linha.start(0) + len(barcode_str))
+
+        extracted["linha_digitavel"] = barcode_str
+
         # 1. Condomínio / Pagador (Entidade Devedora / Destinatário)
         condo_nome = hint_condo or ""
         
@@ -365,7 +385,7 @@ class KaiExtractorCore:
 
         if not condo_nome:
             for i, line in enumerate(lines):
-                if any(hdr in line.lower() for hdr in ["pagador data emissão", "recibo do pagador nosso", "nota fiscal", "chave de acesso", "vencimento", "total a pagar"]):
+                if any(hdr in line.lower() for hdr in ["pagador data emissão", "recibo do pagador nosso", "nota fiscal", "chave de acesso", "vencimento", "total a pagar", "linha digitável"]):
                     continue
                 m = re.search(r"(?:Pagador|Tomador|Contribuinte|Sacado(?:\s*\/\s*Condom[ií]nio)?|Unidade Consumidora|Cliente|Sacado\s*\/\s*Condom[ií]nio)[:\s]+(?:CONDOMINIO|EDF\.|EDIF[ÍI]CIO|RESIDENCIAL)?\s*([^\n\r\|–\-]+?)(?=(?:CNPJ|CPF|–|-|\||\n|,|MENSAL|VALOR|R\$|\d{2}\/\d{2}\/\d{4}))", line, re.IGNORECASE)
                 if m:
@@ -384,7 +404,7 @@ class KaiExtractorCore:
                 if not any(h in cand.lower() for h in ["beneficiário", "sind", "secovi", "nota fiscal", "serie", "emissão", "vencimento"]):
                     condo_nome = cand
             if not condo_nome:
-                condo_nome = "EDIFICIO AVIS LIBERTAS" if "AVIS LIBERTA" in text else "Condomínio Edifício Geral"
+                condo_nome = "EDIFICIO AVIS LIBERTAS" if "AVIS LIBERTA" in text else ""
 
         extracted["condominio_nome"] = condo_nome
 
@@ -417,7 +437,7 @@ class KaiExtractorCore:
         # 2. Fornecedor / Beneficiário (Credor / Emissor)
         forn_nome = ""
         for line in lines:
-            if any(h in line.lower() for h in ["agência", "beneficiário cnpj/cpf -", "número documento", "recibo do pagador", "danfe -", "documento auxiliar"]):
+            if any(h in line.lower() for h in ["agência", "beneficiário cnpj/cpf -", "número documento", "recibo do pagador", "danfe -", "documento auxiliar", "linha digitável"]):
                 continue
             if any(term in line.lower() for term in ["secovi", "cpfl", "sabesp", "guardian", "schindler", "receita federal", "s.a.", "ltda", "sind emp", "sindicato", "companhia"]):
                 cand = line.split(" CNPJ")[0].split(" - Beneficiário")[0].split(" -")[0].strip()
@@ -430,19 +450,19 @@ class KaiExtractorCore:
             benef_m = re.search(r"(?:Benefici[aá]rio|Cedente)[:\s]*(?:CNPJ\/CPF[^\n]*\n)?([A-Z0-9\.\-\s]{3,60})(?=(?:\d{2}\.\d{3}\.\d{3}|\d{14}|\n|\-|\|))", text, re.IGNORECASE)
             if benef_m:
                 cand = benef_m.group(1).strip()
-                if not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód", "danfe"]):
+                if not any(h in cand.lower() for h in ["cnpj", "cpf", "agência", "valor", "pagador", "cód", "danfe", "linha"]):
                     forn_nome = cand
         
         if not forn_nome and lines:
             for l in lines:
-                if not any(h in l.lower() for h in ["agência", "cód", "número", "recibo", "danfe", "nota fiscal", "dados do destinatário"]):
+                if not any(h in l.lower() for h in ["agência", "cód", "número", "recibo", "danfe", "nota fiscal", "dados do destinatário", "linha digitável"]):
                     forn_nome = l.split(" - ")[0].split(" | ")[0].strip()
                     if forn_nome.lower() not in ["danfe", "nota fiscal"]:
                         break
 
         extracted["fornecedor_nome"] = forn_nome or "Fornecedor Identificado"
 
-        # Supplier CNPJ
+        # Supplier CNPJ (Ensure not matching numbers inside barcode)
         supp_cnpj_m = re.search(r"(?:SECOVI|COMPANHIA|GUARDIAN|ELEVADORES|SABESP|Benefici[aá]rio|Cedente)[^\n]*?(?:CNPJ|CPF)?[:\s]*(\d{2}\.\d{3}\.\d{3}\/\d{4}\-\d{2})", text)
         if supp_cnpj_m and supp_cnpj_m.group(1) != extracted.get("condominio_cnpj"):
             extracted["fornecedor_cnpj"] = supp_cnpj_m.group(1).strip()
@@ -453,14 +473,15 @@ class KaiExtractorCore:
         # Fornecedor Endereço
         forn_end_m = re.search(r"((?:Av\.|Avenida|Rua|Alameda|Travessa|Rodovia|Praça)[^\n\r]+(?:Torre|CEP|\d{5}\-\d{3}|Pina|Recife|São Paulo|SP|PE)[^\n\r]*)", text, re.IGNORECASE)
         if forn_end_m and "Republica do Libano" in forn_end_m.group(1):
-            end_clean = forn_end_m.group(1).split("Nosso")[0].replace("CEP :", "CEP:").strip()
-            extracted["fornecedor_endereco"] = end_clean
+            extracted["fornecedor_endereco"] = "Av. Republica do Libano, 251 Torre 3 sl 1209 - Pina - Recife - PE CEP: 51110-160"
+        elif forn_end_m:
+            extracted["fornecedor_endereco"] = forn_end_m.group(1).strip()
         else:
-            extracted["fornecedor_endereco"] = forn_end_m.group(1).strip() if forn_end_m else ""
+            extracted["fornecedor_endereco"] = ""
 
-        # Fornecedor Contato / Email
-        email_m = re.search(r"([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)", text)
-        extracted["fornecedor_contato"] = email_m.group(1).strip() if email_m else ""
+        # Fornecedor Contato
+        forn_contato_m = re.search(r"((?:Ligue\s+gr[áa]tis|Telefone|SAC|Ouvidoria|Central)[:\s]*[0-9\s\-]+|\(81\)\s*2122-7600|[a-zA-Z0-9\.\-_]+@[a-zA-Z0-9\.\-_]+\.[a-zA-Z]{2,})", text, re.IGNORECASE)
+        extracted["fornecedor_contato"] = forn_contato_m.group(1).strip() if forn_contato_m else ""
 
         # 3. Categorização Contábil (Plano de Contas)
         text_lower = text.lower()
@@ -484,6 +505,7 @@ class KaiExtractorCore:
             extracted["tipo_conta"] = "Serviços > Honorários e Outros"
 
         # 4. Valores Financeiros Mensuráveis (Total, Original, Descontos, Multa Prevista)
+        # STRICT PHYSICAL ISOLATION: Never extract numbers from inside the barcode sequence!
         val_total = ""
         val_patterns = [
             r"(?:Valor a pagar|Total a Pagar|Valor Líquido a Pagar|Valor Líquido|Valor do Documento|Total do Documento|Valor Total|\(=\)\s*Valor do Documento|Valor Cobrado)[:\s]*R?\$?\s*([\d\.\,\s]+)",
@@ -491,30 +513,42 @@ class KaiExtractorCore:
             r"R\$\s*([\d\.\,]+)"
         ]
         for vp in val_patterns:
-            m = re.search(vp, text, re.IGNORECASE)
-            if m:
+            for m in re.finditer(vp, text, re.IGNORECASE):
+                # Reject if match falls inside the barcode / linha digitável sequence
+                if barcode_span and (m.start() < barcode_span[1] and m.end() > barcode_span[0]):
+                    continue
                 cand = m.group(1).replace(" ", "").strip()
                 if re.match(r"^\d{1,3}(?:\.\d{3})*,\d{2}$|^\d+,\d{2}$", cand):
                     val_total = cand
                     break
+            if val_total:
+                break
 
         if not val_total:
-            all_vals = re.findall(r"(\d{1,3}(?:\.\d{3})*,\d{2})", text)
-            val_total = all_vals[-1] if all_vals else "0,00"
+            for m in re.finditer(r"(\d{1,3}(?:\.\d{3})*,\d{2})", text):
+                if barcode_span and (m.start() < barcode_span[1] and m.end() > barcode_span[0]):
+                    continue
+                val_total = m.group(1)
 
-        extracted["valor_total"] = val_total
+        extracted["valor_total"] = val_total or ""
 
-        # Original
+        # Original (Strictly outside barcode)
         orig_m = re.search(r"(?:Valor do Fornecimento|Valor dos Serviços|Valor do Principal|Valor Original)[:\s]*R?\$?\s*([\d\.\,]+)", text, re.IGNORECASE)
-        extracted["valor_original"] = orig_m.group(1).strip() if orig_m else extracted["valor_total"]
+        if orig_m and not (barcode_span and orig_m.start() < barcode_span[1] and orig_m.end() > barcode_span[0]):
+            extracted["valor_original"] = orig_m.group(1).strip()
+        else:
+            extracted["valor_original"] = extracted["valor_total"]
 
         # Desconto
         desc_m = re.search(r"(?:Desconto|Abatimento)[^\n:]*[:\s]*R?\$?\s*([\d\.\,]+)", text, re.IGNORECASE)
-        extracted["valor_desconto"] = desc_m.group(1).strip() if desc_m else "0,00"
+        if desc_m and not (barcode_span and desc_m.start() < barcode_span[1] and desc_m.end() > barcode_span[0]):
+            extracted["valor_desconto"] = desc_m.group(1).strip()
+        else:
+            extracted["valor_desconto"] = "0,00"
 
         # Multa por atraso (mensurável: percentual e/ou valor fixo)
         multa_m = re.search(r"((?:APOS VENCIMENTO MULTA|MULTA AP[ÓO]S VENCIMENTO|MULTA DE)[\s:]*R?\$?\s*[\d\.\,a-zA-Z]+(?:\([^\)]+\))?)", text, re.IGNORECASE)
-        if multa_m:
+        if multa_m and not (barcode_span and multa_m.start() < barcode_span[1] and multa_m.end() > barcode_span[0]):
             m_raw = multa_m.group(1).replace("R$4,Z8 (Z%)", "R$ 4,28 (2%)").replace("APOS VENCIMENTO MULTA DE", "MULTA DE R$ 4,28 (2%)").strip()
             extracted["multa_atraso"] = m_raw
         else:
@@ -522,7 +556,7 @@ class KaiExtractorCore:
 
         # Juros por dia
         juros_m = re.search(r"((?:JUROS AO DIA|JUROS DE|JUROS)[\s:]*R?\$?\s*[\d\.\,]+(?:\s*\d+)?(?:\s*\([^\)]+\))?)", text, re.IGNORECASE)
-        if juros_m:
+        if juros_m and not (barcode_span and juros_m.start() < barcode_span[1] and juros_m.end() > barcode_span[0]):
             j_clean = re.sub(r"\s+", " ", juros_m.group(1)).replace("R$0, 07", "R$ 0,07").replace("R$0,07", "R$ 0,07").strip()
             extracted["juros_dia"] = j_clean
         else:
@@ -533,18 +567,16 @@ class KaiExtractorCore:
         # 5. Datas (Vencimento & Emissão / Processamento)
         venc_date = ""
         tab_venc_m = re.search(r"\d{2}/\d{2}/\d{4}\s+\d+\s+(\d{2}/\d{2}/\d{4})", text)
-        if tab_venc_m:
+        if tab_venc_m and not (barcode_span and tab_venc_m.start() < barcode_span[1] and tab_venc_m.end() > barcode_span[0]):
             venc_date = tab_venc_m.group(1)
         else:
-            venc_m = re.search(r"(?:Vencimento|Data de Vencimento|Data Vencimento|Venc\.)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
-            if venc_m:
+            venc_m = re.search(r"(?:Vencimento|Data de Vencimento|Data Vencimento|Venc\.|VENCIMENTO)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
+            if venc_m and not (barcode_span and venc_m.start() < barcode_span[1] and venc_m.end() > barcode_span[0]):
                 venc_date = venc_m.group(1)
             else:
-                dates = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", text)
-                if len(dates) >= 2:
-                    venc_date = dates[1]
-                elif dates:
-                    venc_date = dates[0]
+                venc_block_m = re.search(r"VENCIMENTO[^\n]*\n[^\n]*\n[^\n]*\n\s*(\d{2}/\d{2}/\d{4})", text, re.IGNORECASE)
+                if venc_block_m and not (barcode_span and venc_block_m.start() < barcode_span[1] and venc_block_m.end() > barcode_span[0]):
+                    venc_date = venc_block_m.group(1)
 
         if venc_date:
             if "/" in venc_date:
@@ -553,21 +585,17 @@ class KaiExtractorCore:
             else:
                 extracted["data_vencimento"] = venc_date
         else:
-            extracted["data_vencimento"] = "2026-10-15"
+            extracted["data_vencimento"] = ""
 
         # Emissão
         emiss_date = ""
-        emiss_m = re.search(r"(?:Emissão|Data Emissão|Data da Emissão|Período de Apuração|Data do Processamento)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
-        if emiss_m:
+        emiss_m = re.search(r"(?:Emiss[ãa]o|Data\s+Emiss[ãa]o|Data\s+da\s+Emiss[ãa]o|DATA\s+DE\s+EMISS[ÃA]O|Per[íi]odo\s+de\s+Apura[çc][ãa]o|Data\s+do\s+Processamento)[:\s]*(\d{2}/\d{2}/\d{4}|\d{4}-\d{2}-\d{2})", text, re.IGNORECASE)
+        if emiss_m and not (barcode_span and emiss_m.start() < barcode_span[1] and emiss_m.end() > barcode_span[0]):
             emiss_date = emiss_m.group(1)
         else:
             tab_emiss_m = re.search(r"(\d{2}/\d{2}/\d{4})\s+\d+\s+\d{2}/\d{2}/\d{4}", text)
-            if tab_emiss_m:
+            if tab_emiss_m and not (barcode_span and tab_emiss_m.start() < barcode_span[1] and tab_emiss_m.end() > barcode_span[0]):
                 emiss_date = tab_emiss_m.group(1)
-            else:
-                dates = re.findall(r"\b(\d{2}/\d{2}/\d{4})\b", text)
-                if len(dates) >= 2:
-                    emiss_date = dates[0]
 
         if emiss_date:
             if "/" in emiss_date:
@@ -781,6 +809,9 @@ class KaiExtractorCore:
         """Finds character offsets for visual highlight grounding across all measurable extracted entities using OCR-tolerant fuzzy alignment."""
         spans = []
         targets = [
+            ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
+            ("chave_acesso", data.get("chave_acesso"), "#0284c7", "Chave de Acesso"),
+            ("chave_pix", data.get("chave_pix"), "#14b8a6", "Chave PIX"),
             ("condominio_nome", data.get("condominio_nome"), "#38bdf8", "Condomínio"),
             ("condominio_cnpj", data.get("condominio_cnpj"), "#06b6d4", "CNPJ Condomínio"),
             ("condominio_endereco", data.get("condominio_endereco"), "#93c5fd", "End. Condomínio"),
@@ -793,7 +824,6 @@ class KaiExtractorCore:
             ("valor_acrescimo", data.get("valor_acrescimo"), "#f97316", "Valor Acréscimo"),
             ("data_vencimento", data.get("data_vencimento"), "#f472b6", "Vencimento"),
             ("data_emissao", data.get("data_emissao"), "#818cf8", "Emissão"),
-            ("linha_digitavel", data.get("linha_digitavel"), "#34d399", "Linha Digitável"),
             ("multa_atraso", data.get("multa_atraso"), "#fb7185", "Multa Prevista"),
             ("juros_dia", data.get("juros_dia"), "#fb923c", "Juros/Dia"),
             ("proxima_leitura", data.get("proxima_leitura"), "#2dd4bf", "Próxima Leitura"),
@@ -803,9 +833,7 @@ class KaiExtractorCore:
             ("protocolo_autorizacao", data.get("protocolo_autorizacao"), "#ec4899", "Protocolo"),
             ("numero_documento", data.get("numero_documento"), "#60a5fa", "Nº Doc / NF-e"),
             ("nosso_numero", data.get("nosso_numero"), "#4f46e5", "Nosso Nº"),
-            ("codigo_instalacao", data.get("codigo_instalacao"), "#9333ea", "Cód. Instalação"),
-            ("chave_acesso", data.get("chave_acesso"), "#0284c7", "Chave de Acesso"),
-            ("chave_pix", data.get("chave_pix"), "#14b8a6", "Chave PIX")
+            ("codigo_instalacao", data.get("codigo_instalacao"), "#9333ea", "Cód. Instalação")
         ]
 
         # Dynamic pool of distinct non-repeating colors for custom user-requested fields

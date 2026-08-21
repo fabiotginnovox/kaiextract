@@ -1,0 +1,4 @@
+# Dependências básicas para rodar os testes de validação do KaiExtract localmente
+# Instale usando: pip install -r requirements.txt
+
+requests>=2.31.0

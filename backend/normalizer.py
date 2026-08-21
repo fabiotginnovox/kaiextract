@@ -50,8 +50,22 @@ class ERPNormalizer:
     @staticmethod
     def normalize_extracted_data(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """Ensures all standard KaiExtract fields are clean, typed, and normalized."""
-        valor_total_float = parse_monetary_value(raw_data.get("valor_total"))
-        valor_orig_float = parse_monetary_value(raw_data.get("valor_original", valor_total_float))
+        raw_val_total = raw_data.get("valor_total")
+        if raw_val_total is None or str(raw_val_total).strip() == "":
+            valor_total_str = ""
+            valor_total_float = 0.0
+        else:
+            valor_total_float = parse_monetary_value(raw_val_total)
+            valor_total_str = format_brl(valor_total_float)
+
+        raw_val_orig = raw_data.get("valor_original")
+        if raw_val_orig is None or str(raw_val_orig).strip() == "":
+            valor_orig_str = valor_total_str
+            valor_orig_float = valor_total_float
+        else:
+            valor_orig_float = parse_monetary_value(raw_val_orig)
+            valor_orig_str = format_brl(valor_orig_float)
+
         valor_desc_float = parse_monetary_value(raw_data.get("valor_desconto", 0.0))
         valor_acres_float = parse_monetary_value(raw_data.get("valor_acrescimo", 0.0))
         
@@ -67,9 +81,9 @@ class ERPNormalizer:
             "fornecedor_cnpj": format_cnpj(raw_data.get("fornecedor_cnpj")),
             "fornecedor_endereco": str(raw_data.get("fornecedor_endereco", "")).strip(),
             "fornecedor_contato": str(raw_data.get("fornecedor_contato", "")).strip(),
-            "valor_total": format_brl(valor_total_float),
+            "valor_total": valor_total_str,
             "valor_total_float": valor_total_float,
-            "valor_original": format_brl(valor_orig_float),
+            "valor_original": valor_orig_str,
             "valor_desconto": format_brl(valor_desc_float),
             "valor_acrescimo": format_brl(valor_acres_float),
             "multa_atraso": str(raw_data.get("multa_atraso", "")).strip(),
