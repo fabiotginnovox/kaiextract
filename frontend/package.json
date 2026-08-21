@@ -1,12 +1,14 @@
 {
   "name": "kaiextract-frontend",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "node ../scripts/deploy.js",
+    "deploy:nobump": "node ../scripts/deploy.js --no-bump"
   },
   "dependencies": {
     "clsx": "^2.1.1",

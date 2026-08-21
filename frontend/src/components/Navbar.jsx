@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrowRight, Building2, Activity } from 'lucide-react';
 import logoSvg from '../assets/KaiExtract-svg-logo.svg';
+import { APP_VERSION } from '../version';
 
 export default function Navbar({ 
   fase, 
@@ -17,13 +18,19 @@ export default function Navbar({
     <header className="border-b border-[#453A31] px-6 lg:px-10 py-3.5 flex flex-wrap gap-4 justify-between items-center bg-[#2E2621] sticky top-0 z-40">
       
       {/* Brand & Logo */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
         <img 
           src={logoSvg} 
           alt="KaiExtract" 
           className="h-8 w-auto object-contain cursor-pointer"
           onClick={onReset}
         />
+        <span 
+          title="Versão da Plataforma"
+          className="text-[11px] font-mono text-[#D5A474] bg-[#3B3028] border border-[#D5A474]/40 px-2 py-0.5 rounded-md font-medium tracking-tight shadow-sm select-none"
+        >
+          {APP_VERSION}
+        </span>
       </div>
 
       {/* Interactive Stepper / Workflow Pipeline */}
