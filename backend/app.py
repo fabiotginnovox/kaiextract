@@ -8,12 +8,13 @@ import json
 from typing import Optional, Dict, Any
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from pydantic import BaseModel
 
 from extractor import KaiExtractorCore
 from normalizer import ERPNormalizer
 from audit_accuracy import run_accuracy_audit
+from pdf_processor import validate_and_extract_pdf_text
 
 app = FastAPI(
     title="KaiExtract API",
@@ -95,12 +96,36 @@ async def extract_document_endpoint(
     file: Optional[UploadFile] = File(None)
 ):
     """
-    Extracts structured data from uploaded .txt file or direct text body.
+    Extracts structured data from uploaded .txt or .pdf file or direct text body.
+    Validates native text layer for PDFs (blocks scanned image PDFs).
     """
     document_text = ""
+    file_type = "txt"
+    pdf_bytes: Optional[bytes] = None
+
     if file:
+        filename = (file.filename or "").lower()
+        content_type = (file.content_type or "").lower()
+        is_pdf = filename.endswith(".pdf") or "pdf" in content_type
+        is_txt = filename.endswith(".txt") or "text" in content_type or not filename
+
+        if not (is_pdf or is_txt):
+            raise HTTPException(
+                status_code=400,
+                detail="Formato de arquivo não suportado. Por favor, envie apenas arquivos .TXT ou .PDF."
+            )
+
         content_bytes = await file.read()
-        document_text = content_bytes.decode("utf-8", errors="ignore")
+        if is_pdf:
+            file_type = "pdf"
+            is_valid, extracted_txt, err_msg = validate_and_extract_pdf_text(content_bytes)
+            if not is_valid:
+                raise HTTPException(status_code=400, detail=err_msg)
+            document_text = extracted_txt
+            pdf_bytes = content_bytes
+        else:
+            file_type = "txt"
+            document_text = content_bytes.decode("utf-8", errors="ignore")
     elif text:
         document_text = text
     else:
@@ -111,16 +136,29 @@ async def extract_document_endpoint(
 
     try:
         result = extractor_engine.extract_document(document_text, output_dir=OUTPUTS_DIR)
+        doc_id = result["doc_id"]
+
+        pdf_url = None
+        if file_type == "pdf" and pdf_bytes:
+            pdf_save_path = os.path.join(OUTPUTS_DIR, f"{doc_id}.pdf")
+            with open(pdf_save_path, "wb") as f:
+                f.write(pdf_bytes)
+            pdf_url = f"/api/pdf/{doc_id}"
+
         return {
             "status": "success",
-            "doc_id": result["doc_id"],
+            "doc_id": doc_id,
+            "file_type": file_type,
+            "pdf_url": pdf_url,
             "raw_text": result["raw_text"],
             "dados_extraidos": result["dados_extraidos"],
             "grounding_spans": result["grounding_spans"],
-            "html_viewer_url": f"/api/visualize/{result['doc_id']}",
+            "html_viewer_url": f"/api/visualize/{doc_id}",
             "superlogica": result["superlogica"],
             "condominia": result["condominia"]
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro durante a extração: {str(e)}")
 
@@ -165,6 +203,16 @@ def get_visualization_html(doc_id: str):
     with open(html_path, "r", encoding="utf-8") as f:
         html_content = f.read()
     return HTMLResponse(content=html_content, status_code=200)
+
+@app.get("/api/pdf/{doc_id}")
+def get_pdf_file(doc_id: str):
+    """
+    Returns the original uploaded PDF file for in-browser rendering.
+    """
+    pdf_path = os.path.join(OUTPUTS_DIR, f"{doc_id}.pdf")
+    if not os.path.exists(pdf_path):
+        raise HTTPException(status_code=404, detail="Arquivo PDF não encontrado.")
+    return FileResponse(pdf_path, media_type="application/pdf")
 
 @app.post("/api/export")
 def export_data(request: ExportRequest):

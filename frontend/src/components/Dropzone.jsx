@@ -46,7 +46,7 @@ export default function Dropzone({ onProcessText, onProcessFile, samples = [] })
           <input 
             type="file" 
             id="fileInput" 
-            accept=".txt" 
+            accept=".txt,.pdf,text/plain,application/pdf" 
             onChange={handleDrop} 
             className="hidden" 
           />
@@ -56,16 +56,20 @@ export default function Dropzone({ onProcessText, onProcessFile, samples = [] })
               <Upload className="w-7 h-7" />
             </div>
 
-            <h3 className="font-serif text-xl font-normal text-[#FFFEFD] mb-2">
-              Solte seu arquivo <span className="font-mono text-sm uppercase px-2 py-0.5 border border-[#453A31] rounded text-[#BCB4AD]">.TXT</span> aqui
+            <h3 className="font-serif text-xl font-normal text-[#FFFEFD] mb-2 flex items-center gap-1.5 flex-wrap justify-center">
+              Solte seu arquivo 
+              <span className="font-mono text-sm uppercase px-2 py-0.5 border border-[#453A31] rounded text-[#BCB4AD]">.TXT</span>
+              <span>ou</span>
+              <span className="font-mono text-sm uppercase px-2 py-0.5 border border-[#453A31] rounded text-[#BCB4AD]">.PDF</span>
+              aqui
             </h3>
             <p className="text-[#97918D] text-xs sm:text-sm max-w-md mb-6">
-              Contas de concessionárias (CPFL, Sabesp), contratos (Manutenção elevador, Portaria) ou guias de tributos (DARF).
+              Contas de concessionárias (CPFL, Sabesp, Neoenergia), contratos ou guias de tributos (.TXT ou .PDF editável).
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-3">
               <span className="kai-btn-primary px-6 py-2.5 rounded-lg text-xs font-semibold cursor-pointer">
-                Selecionar Arquivo do Computador
+                Subir Arquivo
               </span>
               <button
                 type="button"

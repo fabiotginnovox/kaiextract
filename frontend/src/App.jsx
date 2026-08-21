@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import Dropzone from './components/Dropzone';
 import GroundingViewer, { buildGroundingHtml } from './components/GroundingViewer';
 import ExtractionForm from './components/ExtractionForm';
+import PdfViewer from './components/PdfViewer';
 import SuccessModal from './components/SuccessModal';
 import AuditModal from './components/AuditModal';
 import { extractDocumentClientSide, normalizeSelectedValue } from './utils/clientExtractor';
@@ -21,6 +22,8 @@ export default function App() {
   };
   const [currentDoc, setCurrentDoc] = useState({
     docId: '',
+    fileType: 'txt', // 'txt' | 'pdf'
+    pdfUrl: null,
     rawText: '',
     htmlContent: '',
     groundingSpans: [],
@@ -130,13 +133,16 @@ export default function App() {
       });
 
       if (!res.ok) {
-        throw new Error(`Erro na extração (${res.status})`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Erro na extração (${res.status})`);
       }
 
       const data = await res.json();
       
       setCurrentDoc({
         docId: data.doc_id,
+        fileType: 'txt',
+        pdfUrl: null,
         rawText: data.raw_text,
         htmlContent: data.html_viewer_url ? await fetchHtmlView(data.html_viewer_url) : '',
         groundingSpans: data.grounding_spans || [],
@@ -152,6 +158,16 @@ export default function App() {
 
   const handleProcessFile = async (file) => {
     setErrorMsg(null);
+
+    const filename = (file.name || '').toLowerCase();
+    const isPdf = filename.endsWith('.pdf') || file.type === 'application/pdf';
+    const isTxt = filename.endsWith('.txt') || file.type.includes('text');
+
+    if (!isPdf && !isTxt) {
+      setErrorMsg("Formato não suportado. Por favor envie apenas arquivos .TXT ou .PDF.");
+      return;
+    }
+
     setFase('processando');
 
     try {
@@ -164,13 +180,16 @@ export default function App() {
       });
 
       if (!res.ok) {
-        throw new Error(`Erro no upload (${res.status})`);
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || `Erro no upload (${res.status})`);
       }
 
       const data = await res.json();
       
       setCurrentDoc({
         docId: data.doc_id,
+        fileType: data.file_type || (isPdf ? 'pdf' : 'txt'),
+        pdfUrl: data.pdf_url || (isPdf ? URL.createObjectURL(file) : null),
         rawText: data.raw_text,
         htmlContent: data.html_viewer_url ? await fetchHtmlView(data.html_viewer_url) : '',
         groundingSpans: data.grounding_spans || [],
@@ -179,12 +198,9 @@ export default function App() {
 
       setFase('validacao');
     } catch (err) {
-      console.warn("Fallback client-side para processamento de arquivo:", err);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        simulateLocalExtraction(e.target.result);
-      };
-      reader.readAsText(file);
+      console.warn("Erro ao processar arquivo:", err);
+      setErrorMsg(err.message || "Erro ao processar o arquivo.");
+      setFase('upload');
     }
   };
 
@@ -203,7 +219,11 @@ export default function App() {
   const simulateLocalExtraction = (text) => {
     setTimeout(() => {
       const extracted = extractDocumentClientSide(text);
-      setCurrentDoc(extracted);
+      setCurrentDoc({
+        ...extracted,
+        fileType: 'txt',
+        pdfUrl: null
+      });
       setFase('validacao');
     }, 600);
   };
@@ -417,7 +437,7 @@ export default function App() {
       )}
 
       {/* Main App Body */}
-      <main className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+      <main className={`flex-1 flex flex-col p-4 sm:p-6 lg:p-8 ${currentDoc?.fileType === 'pdf' && currentDoc?.pdfUrl ? 'max-w-[1760px]' : 'max-w-7xl'} mx-auto w-full`}>
         
         {/* State 1: Upload Dropzone ("Vazio Criativo") */}
         {fase === 'upload' && (
@@ -448,43 +468,89 @@ export default function App() {
 
         {/* State 3 & 4: Split-Screen Audit & Validation */}
         {(fase === 'validacao' || fase === 'sincronizado') && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start animate-fadeIn">
-            
-            {/* Left Panel: Grounding / Raw Text Viewer */}
-            <div className="w-full">
-              <GroundingViewer 
-                rawText={currentDoc.rawText} 
-                htmlContent={currentDoc.htmlContent}
-                docId={currentDoc.docId}
-                groundingSpans={currentDoc.groundingSpans}
-                focusedField={focusedField}
-                onManualGrounding={handleManualGrounding}
-                onFocusField={(f) => handleFocusField(f, 'viewer')}
-                onReExtract={handleReExtract}
-                isReExtracting={isReExtracting}
-                editedFields={editedFields}
-              />
-            </div>
+          currentDoc?.fileType === 'pdf' && currentDoc?.pdfUrl ? (
+            /* 3-Column Dynamic Layout for Editable PDF */
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 flex-1 items-start animate-fadeIn w-full">
+              {/* Coluna 1 (Nova - mais à esquerda): Visualizador do PDF Original */}
+              <div className="w-full">
+                <PdfViewer 
+                  pdfUrl={currentDoc.pdfUrl}
+                  docId={currentDoc.docId}
+                />
+              </div>
 
-            {/* Right Panel: Extraction Review & Sync Form */}
-            <div className="h-full">
-              <ExtractionForm 
-                dados={currentDoc.dadosExtraidos}
-                onChange={handleFieldChange}
-                onSync={handleSync}
-                onReset={handleReset}
-                erpDestino={erpDestino}
-                onFocusField={(f) => handleFocusField(f, 'form')}
-                groundingSpans={currentDoc.groundingSpans}
-                onReExtract={handleReExtract}
-                isReExtracting={isReExtracting}
-                editedFields={editedFields}
-                focusedField={focusedField}
-                onDeleteField={handleDeleteField}
-              />
-            </div>
+              {/* Coluna 2 (Centro): Auditoria Visual & Documento (Texto .TXT resultante da conversão) */}
+              <div className="w-full">
+                <GroundingViewer 
+                  rawText={currentDoc.rawText} 
+                  htmlContent={currentDoc.htmlContent}
+                  docId={currentDoc.docId}
+                  groundingSpans={currentDoc.groundingSpans}
+                  focusedField={focusedField}
+                  onManualGrounding={handleManualGrounding}
+                  onFocusField={(f) => handleFocusField(f, 'viewer')}
+                  onReExtract={handleReExtract}
+                  isReExtracting={isReExtracting}
+                  editedFields={editedFields}
+                />
+              </div>
 
-          </div>
+              {/* Coluna 3 (Direita): Dados Estruturados (Campos extraídos para SuperLógica) */}
+              <div className="w-full">
+                <ExtractionForm 
+                  dados={currentDoc.dadosExtraidos}
+                  onChange={handleFieldChange}
+                  onSync={handleSync}
+                  onReset={handleReset}
+                  erpDestino={erpDestino}
+                  onFocusField={(f) => handleFocusField(f, 'form')}
+                  groundingSpans={currentDoc.groundingSpans}
+                  onReExtract={handleReExtract}
+                  isReExtracting={isReExtracting}
+                  editedFields={editedFields}
+                  focusedField={focusedField}
+                  onDeleteField={handleDeleteField}
+                />
+              </div>
+            </div>
+          ) : (
+            /* 2-Column Standard Layout for .TXT Document */
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1 items-start animate-fadeIn w-full">
+              {/* Coluna 1: Auditoria Visual & Documento (.TXT) */}
+              <div className="w-full">
+                <GroundingViewer 
+                  rawText={currentDoc.rawText} 
+                  htmlContent={currentDoc.htmlContent}
+                  docId={currentDoc.docId}
+                  groundingSpans={currentDoc.groundingSpans}
+                  focusedField={focusedField}
+                  onManualGrounding={handleManualGrounding}
+                  onFocusField={(f) => handleFocusField(f, 'viewer')}
+                  onReExtract={handleReExtract}
+                  isReExtracting={isReExtracting}
+                  editedFields={editedFields}
+                />
+              </div>
+
+              {/* Coluna 2: Dados Estruturados (Campos extraídos para SuperLógica) */}
+              <div className="w-full">
+                <ExtractionForm 
+                  dados={currentDoc.dadosExtraidos}
+                  onChange={handleFieldChange}
+                  onSync={handleSync}
+                  onReset={handleReset}
+                  erpDestino={erpDestino}
+                  onFocusField={(f) => handleFocusField(f, 'form')}
+                  groundingSpans={currentDoc.groundingSpans}
+                  onReExtract={handleReExtract}
+                  isReExtracting={isReExtracting}
+                  editedFields={editedFields}
+                  focusedField={focusedField}
+                  onDeleteField={handleDeleteField}
+                />
+              </div>
+            </div>
+          )
         )}
 
       </main>
